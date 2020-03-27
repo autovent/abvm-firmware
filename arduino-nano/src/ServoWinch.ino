@@ -5,14 +5,11 @@
 
 #include <Servo.h> 
 #include <Arduino.h>
-
+#include "winch.h"
 enum class Modes {
   CALIBRATION,
   SERVO,
 };
-
-
-Servo winch;
 
 int timer = 150;
 int pos;
@@ -20,8 +17,8 @@ int pot;
 int fwd = 2000;
 int rev = 1000;
 
-const uint8_t servo_pin = PIN3;
-const uint8_t pot_pin = PIN1;
+const uint8_t servo_pin = 2;
+const uint8_t pot_pin = PIN_A0;
 const Modes mode = Modes::SERVO;
 struct WinchSettings {
   int32_t closed_us;
@@ -30,8 +27,8 @@ struct WinchSettings {
 };
 
 WinchSettings settings = {
-  .closed_us = 1236,
-  .open_us = 1350 ,
+  .closed_us = 1166,
+  .open_us = 1300 ,
   .idle_us = 1400
 
 };
@@ -53,12 +50,14 @@ uint32_t control_rate_ms = 1e3/100.0; // 100Hz control rate
 uint32_t last_time_ms = 0;
 int32_t dir = -1;
 
+Winch winch(servo_pin);
 void setup() 
 { 
   Serial.begin(9600);
-  winch.attach(servo_pin); 
+  // winch.attach(servo_pin, 18000, 19000); 
   pos = settings.idle_us;
 
+  winch.init();
   winch.writeMicroseconds(pos);
   delay(1);
 } 
@@ -79,7 +78,7 @@ void loop() {
   } else {
       uint32_t now = millis();
 
-    if (abs(now - last_time_ms) >= 10) {
+    if (abs(now - last_time_ms) >= 20) {
       uint32_t rate_idx = map(analogRead(pot_pin), 0, 1023, 0, num_rates);      // scales values   
       Serial.println(pos, DEC);
       Serial.println(rate_idx, DEC);
