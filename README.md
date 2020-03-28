@@ -52,4 +52,4 @@ WinchSettings settings = {
 
 ## Running in "Rate Mode"
 
-Set the `Mode mode = Mode::SERVO` this will run rate control. In the far position to one side the motor will go to the idle position and not move (OFF). As you turn the dial it will increase its control rate.
+Set the `Mode mode = Mode::RATE` this will run rate control. In the far position to one side the motor will go to the idle position and not move (OFF). As you turn the dial it will increase its control rate.

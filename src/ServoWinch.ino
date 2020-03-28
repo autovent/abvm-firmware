@@ -24,37 +24,44 @@ const uint8_t red_led_pin = 4;
 const uint32_t kCurrentUpdatePeriod_ms = 1;
 const uint32_t kServoUpdatePeriod_ms = 20; // Match the 50 freq of the servo motors
 
+
+
+// Configuration parameters 
+// ! EDIT theses as needed
+uint32_t slowest_breath_length_ms = 6250;
+uint32_t fastest_breath_length_ms = 2400;
+uint32_t slowest_closed_us = 950;
+uint32_t fastest_closed_us = 1050;
+float     expiration_percent = .66666;
+float     inspiration_percent = .33333;
+
 struct WinchSettings
 {
   int32_t closed_us;
+  float closed_slope;
   int32_t open_us;
   int32_t idle_us;
 };
-
 WinchSettings settings = {
-    .closed_us = 1000,
-    .open_us = 1872,
-    .idle_us = 2000
-};
+    // 950 at the low end 1050 at the top end
+    .closed_us = slowest_closed_us,
+    .closed_slope = (fastest_closed_us - slowest_closed_us) / ((float)fastest_breath_length_ms- slowest_breath_length_ms), // Good at low end
 
-
-const int32_t num_rates = 8;
-
-static int32_t pos_hold_table_ms[8][2] = {
-    {400, 400},
-    {360, 360},
-    {330, 330},
-    {300, 300},
-    {260, 260},
-    {230, 230},
-    {200, 200},
-    {180, 190},
-
-};
+    .open_us = 1850,
+    .idle_us = 2000};
 
 uint32_t last_time_ms = 0;
 bool is_open = true;
-uint32_t pos = 0;
+int32_t pos = 0;
+enum class BreathState
+{
+  IDLE,
+  INHALATION,
+  PLATEAU,
+  EXHALATION,
+};
+
+BreathState breath_state = BreathState::IDLE;
 Winch winch(servo_pin, 50);
 
 uint32_t last_time_current_ms = 0;
@@ -128,27 +135,53 @@ void loop()
     {
       // Print the currents for now.
       // TODO(cw): Use the currents as feedback? Set desired depth by torque/pressure?
-      Serial.println(filter_current(), DEC);
+      // Serial.println(filter_current(), DEC);
 
-      uint32_t rate_idx = map(analogRead(pot_pin), 0, 1023, 0, num_rates); // scales values
+      float breath_length_ms = map(analogRead(pot_pin), 0, 1023, slowest_breath_length_ms + 100, fastest_breath_length_ms); // scales values
 
-      if (rate_idx == 0)
-      { // If speed is 0 set to idle position
-        winch.writeMicroseconds(settings.idle_us);
-      }
-      else
+      uint32_t closed_ms = settings.closed_us + settings.closed_slope * (breath_length_ms - slowest_breath_length_ms);
+
+
+      if ((breath_state != BreathState::IDLE  && breath_length_ms > slowest_breath_length_ms + 50) || breath_length_ms > slowest_breath_length_ms)
       {
-        uint32_t counter_max = pos_hold_table_ms[rate_idx - 1][is_open ? 1 : 0];
-        // Lookup the amount of time we want to stay in a specific position
-        if (++counter > counter_max)
-        {
-          is_open = !is_open;
-          counter = 0;
-        }
-
-
-        winch.writeMicroseconds(is_open ? settings.open_us : settings.closed_us);
+        breath_state = BreathState::IDLE;
       }
+      else if ((breath_state != BreathState::INHALATION) && pos >= settings.open_us)
+      {
+        Serial.write("Starting inhalation at: ");
+        Serial.println(now, DEC);
+        Serial.println(closed_ms, DEC);
+
+        breath_state = BreathState::INHALATION;
+      }
+      else if ((breath_state != BreathState::EXHALATION) && (pos <= closed_ms))
+      {
+        Serial.write("Starting exhalation at: ");
+        Serial.println(now, DEC);
+        Serial.println(closed_ms, DEC);
+
+        breath_state = BreathState::EXHALATION;
+      }
+
+
+      switch (breath_state)
+      {
+      case BreathState::IDLE:
+        if (pos <= settings.idle_us) {
+          pos += (settings.idle_us - closed_ms) * ((float)kServoUpdatePeriod_ms / (expiration_percent * breath_length_ms));
+        }
+      break;
+      case BreathState::INHALATION:
+        pos -= (settings.open_us - closed_ms) * ((float)kServoUpdatePeriod_ms / (inspiration_percent * breath_length_ms));
+        break;
+      case BreathState::EXHALATION:
+        pos += (settings.open_us - closed_ms) * ((float)kServoUpdatePeriod_ms / (expiration_percent * breath_length_ms));
+        break;
+      default:
+        break;
+      }
+
+      winch.writeMicroseconds(pos);
       last_time_ms = now;
     }
   }
