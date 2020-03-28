@@ -11,9 +11,9 @@
 enum class Modes
 {
   CALIBRATION,
-  SERVO,
+  RATE,
 };
-const Modes mode = Modes::CALIBRATION;
+const Modes mode = Modes::RATE;
 
 const uint8_t servo_pin = 2;
 const uint8_t pot_pin = PIN_A0;
@@ -32,11 +32,11 @@ struct WinchSettings
 };
 
 WinchSettings settings = {
-    .closed_us = 1559,
-    .open_us = 1790,
-    .idle_us = 1400
-
+    .closed_us = 1000,
+    .open_us = 1872,
+    .idle_us = 2000
 };
+
 
 const int32_t num_rates = 8;
 
@@ -146,22 +146,8 @@ void loop()
           counter = 0;
         }
 
-        uint32_t cmd = 0;
-        if (is_open) {
-          if (counter < .3*counter_max) {
-            cmd = settings.open_us + 20;
-          } else {
-            cmd = settings.open_us;
-          }
-        } else {
-          if (counter < .3*counter_max) {
-            cmd = settings.closed_us - 20;
-          } else {
-            cmd = settings.closed_us;
-          }
 
-        }
-        winch.writeMicroseconds(cmd);
+        winch.writeMicroseconds(is_open ? settings.open_us : settings.closed_us);
       }
       last_time_ms = now;
     }
