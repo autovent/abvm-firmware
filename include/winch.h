@@ -17,8 +17,7 @@ void init() {
 
 void writeMicroseconds(uint32_t us) {
   uint32_t period_us = (1000000 / freq);
-  Serial.println(period_us);
-  Serial.println(1024 * (float)(period_us - us) / period_us, DEC);
+  
   uint32_t cmd = 1024 * (float)(period_us - us) / period_us;
   if (cmd != last_cmd) {
     last_cmd = cmd;
