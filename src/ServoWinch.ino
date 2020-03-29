@@ -7,52 +7,14 @@
 #include <Arduino.h>
 #include "winch.h"
 #include "circular_buffer.h"
+#include "pins.h"
 
 enum class Modes
 {
   CALIBRATION,
   RATE,
 };
-const Modes mode = Modes::RATE;
 
-const uint8_t servo_pin = 2;
-const uint8_t pot_pin = PIN_A0;
-const uint8_t current_pin = PIN_A1;
-const uint8_t green_led_pin = 3;
-const uint8_t red_led_pin = 4;
-
-const uint32_t kCurrentUpdatePeriod_ms = 1;
-const uint32_t kServoUpdatePeriod_ms = 20; // Match the 50 freq of the servo motors
-
-
-
-// Configuration parameters 
-// ! EDIT theses as needed
-uint32_t slowest_breath_length_ms = 6250;
-uint32_t fastest_breath_length_ms = 2400;
-uint32_t slowest_closed_us = 950;
-uint32_t fastest_closed_us = 1050;
-float     expiration_percent = .66666;
-float     inspiration_percent = .33333;
-
-struct WinchSettings
-{
-  int32_t closed_us;
-  float closed_slope;
-  int32_t open_us;
-  int32_t idle_us;
-};
-WinchSettings settings = {
-    // 950 at the low end 1050 at the top end
-    .closed_us = slowest_closed_us,
-    .closed_slope = (fastest_closed_us - slowest_closed_us) / ((float)fastest_breath_length_ms- slowest_breath_length_ms), // Good at low end
-
-    .open_us = 1850,
-    .idle_us = 2000};
-
-uint32_t last_time_ms = 0;
-bool is_open = true;
-int32_t pos = 0;
 enum class BreathState
 {
   IDLE,
@@ -61,37 +23,62 @@ enum class BreathState
   EXHALATION,
 };
 
-BreathState breath_state = BreathState::IDLE;
-Winch winch(servo_pin, 50);
 
+constexpr Modes mode = Modes::RATE;
+
+constexpr uint32_t kCurrentUpdatePeriod_ms = 1;
+constexpr uint32_t kServoUpdatePeriod_ms = 20; // Match the 50 freq of the servo motors
+
+// Configuration parameters
+// ! EDIT theses as needed
+constexpr int32_t slowest_breath_length_ms = 6250;
+constexpr int32_t fastest_breath_length_ms = 2400;
+constexpr float idle_deg = 5;  
+constexpr float open_deg = 50;    // Change this to a value where the servo is just barely compressing the bag
+constexpr float closed_deg = 140; // Change this to a value where the servo has displaced the appropriate amount.
+constexpr float expiration_percent = .66666;
+constexpr float inspiration_percent = .33333;
+constexpr bool invert_motion = false; // Change this is the motor is inverted. This will reflect it 180
+
+uint32_t last_time_ms = 0;
 uint32_t last_time_current_ms = 0;
+
+
+float m_pos_degrees = 0;
+
+BreathState breath_state = BreathState::IDLE;
+Winch winch(servo_pin);
 
 CircularBuffer<float, 60, true> current_buffer;
 
 void setup()
 {
   Serial.begin(9600);
-  pos = settings.idle_us;
 
   pinMode(red_led_pin, OUTPUT);
   pinMode(green_led_pin, OUTPUT);
   digitalWrite(red_led_pin, LOW);
   digitalWrite(green_led_pin, LOW);
 
+  winch.invert = invert_motion;
   winch.init();
-  winch.writeMicroseconds(pos);
 
+  
+  m_pos_degrees = idle_deg;
+  winch.writeDegrees(m_pos_degrees);
+  
   last_time_ms = millis();
   last_time_current_ms = millis();
+
   delay(1);
 }
 
 void calibrate()
 {
-  pos = map(analogRead(pot_pin), 0, 1023, 600, 2400); // scales values
-  Serial.print(pos, DEC);
+  m_pos_degrees = map(analogRead(pot_pin), 0, 1023, 600, 2400); // scales values
+  Serial.print(m_pos_degrees, DEC);
   Serial.write("\n");
-  winch.writeMicroseconds(pos);
+  winch.writeMicroseconds(m_pos_degrees);
 }
 
 int32_t counter = 0;
@@ -137,51 +124,45 @@ void loop()
       // TODO(cw): Use the currents as feedback? Set desired depth by torque/pressure?
       // Serial.println(filter_current(), DEC);
 
+      // Read the potentiometer and determine the total length of breath
       float breath_length_ms = map(analogRead(pot_pin), 0, 1023, slowest_breath_length_ms + 100, fastest_breath_length_ms); // scales values
 
-      uint32_t closed_ms = settings.closed_us + settings.closed_slope * (breath_length_ms - slowest_breath_length_ms);
-
-
-      if ((breath_state != BreathState::IDLE  && breath_length_ms > slowest_breath_length_ms + 50) || breath_length_ms > slowest_breath_length_ms)
+      if ((breath_state != BreathState::IDLE && breath_length_ms > slowest_breath_length_ms + 50) || breath_length_ms > slowest_breath_length_ms)
       {
         breath_state = BreathState::IDLE;
       }
-      else if ((breath_state != BreathState::INHALATION) && pos >= settings.open_us)
+      else if ((breath_state != BreathState::INHALATION) && m_pos_degrees <= open_deg)
       {
         Serial.write("Starting inhalation at: ");
         Serial.println(now, DEC);
-        Serial.println(closed_ms, DEC);
-
         breath_state = BreathState::INHALATION;
       }
-      else if ((breath_state != BreathState::EXHALATION) && (pos <= closed_ms))
+      else if ((breath_state != BreathState::EXHALATION) && (m_pos_degrees >= closed_deg))
       {
         Serial.write("Starting exhalation at: ");
         Serial.println(now, DEC);
-        Serial.println(closed_ms, DEC);
-
         breath_state = BreathState::EXHALATION;
       }
-
 
       switch (breath_state)
       {
       case BreathState::IDLE:
-        if (pos <= settings.idle_us) {
-          pos += (settings.idle_us - closed_ms) * ((float)kServoUpdatePeriod_ms / (expiration_percent * breath_length_ms));
+        if (m_pos_degrees >= idle_deg)
+        {
+          m_pos_degrees += (idle_deg - closed_deg) * ((float)kServoUpdatePeriod_ms / (expiration_percent * breath_length_ms));
         }
-      break;
+        break;
       case BreathState::INHALATION:
-        pos -= (settings.open_us - closed_ms) * ((float)kServoUpdatePeriod_ms / (inspiration_percent * breath_length_ms));
+        m_pos_degrees += (closed_deg - open_deg) * ((float)kServoUpdatePeriod_ms / (inspiration_percent * breath_length_ms));
         break;
       case BreathState::EXHALATION:
-        pos += (settings.open_us - closed_ms) * ((float)kServoUpdatePeriod_ms / (expiration_percent * breath_length_ms));
+        m_pos_degrees += (open_deg - closed_deg) * ((float)kServoUpdatePeriod_ms / (expiration_percent * breath_length_ms));
         break;
       default:
         break;
       }
 
-      winch.writeMicroseconds(pos);
+      winch.writeDegrees(m_pos_degrees);
       last_time_ms = now;
     }
   }
