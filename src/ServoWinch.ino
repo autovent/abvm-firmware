@@ -32,12 +32,12 @@ constexpr uint32_t kServoUpdatePeriod_ms = 20; // Match the 50 freq of the servo
 // ! EDIT theses as needed
 constexpr int32_t kSlowestBreathTime_ms = 6250;
 constexpr int32_t kFastestBreathTime_ms = 2400;
-constexpr float kIdlePositiong_deg = 2;
-constexpr float kOpenPosition_deg = 10;    // Change this to a value where the servo is just barely compressing the bag
-constexpr float kMinClosedPosition_deg = 90; // Change this to a value where the servo has displaced the appropriate amount.
+constexpr float kIdlePositiong_deg = 0;
+constexpr float kOpenPosition_deg = 0;        // Change this to a value where the servo is just barely compressing the bag
+constexpr float kMinClosedPosition_deg = 90;  // Change this to a value where the servo has displaced the appropriate amount.
 constexpr float kMaxClosedPosition_deg = 180; // Change this to a value where the servo has displaced the appropriate amount.
-constexpr float kExpiration_percents = .66666;
-constexpr float kInspiration_percent = .33333;
+constexpr float kExpiration_percents = .666666666;
+constexpr float kInspiration_percent = .333333333;
 constexpr bool kInvertMotion = true; // Change this is the motor is inverted. This will reflect it 180
 
 BreathState breath_state = BreathState::IDLE;
@@ -46,11 +46,11 @@ CurrentSensor current_sensor(current_pin);
 
 void setup()
 {
-  Serial.begin(9600);
+  Serial.begin(115200);
 
   pinMode(red_led_pin, OUTPUT);
   pinMode(green_led_pin, OUTPUT);
-  digitalWrite(red_led_pin, LOW);
+  digitalWrite(red_led_pin, HIGH);
   digitalWrite(green_led_pin, HIGH);
 
   winch.invert = kInvertMotion;
@@ -85,16 +85,20 @@ void squeeze()
 
   if (abs(now - last_time_ms) >= kServoUpdatePeriod_ms)
   {
-    // Print the currents for now.
-    Serial.print(analogRead(depth_in_pin), DEC);
-        Serial.write(", ");
-
-    Serial.print(current_sensor.get(), DEC);
-    Serial.write(", ");
-    Serial.println(m_pos_degrees, DEC);
+    // Print the currents for the current cycle now.
+    // Format: time, closed pos, current, position
+    // TODO: Move this into it's own task
+    Serial.print(now/1000.0, DEC);
+    Serial.write(",");
+    Serial.print(closed_position_deg, DEC);
+    Serial.write(",");
+    Serial.print(1000*current_sensor.get(), DEC);
+    Serial.write(",");
+    Serial.print(m_pos_degrees, DEC);
+    Serial.write("\r\n");
 
     // Read the potentiometer and determine the total length of breath
-    float breath_length_ms = map(analogRead(rate_in_pin), 0, 1023, kSlowestBreathTime_ms + 100, kFastestBreathTime_ms); // scales values
+    float breath_length_ms = map(analogRead(rate_in_pin), 0, 1023, kSlowestBreathTime_ms + 100, kFastestBreathTime_ms);      // scales values
     float next_closed_position_deg = map(analogRead(depth_in_pin), 0, 1023, kMinClosedPosition_deg, kMaxClosedPosition_deg); // scales values
 
     if ((breath_state != BreathState::IDLE && breath_length_ms > kSlowestBreathTime_ms + 50) || breath_length_ms > kSlowestBreathTime_ms)
@@ -103,15 +107,15 @@ void squeeze()
     }
     else if ((breath_state != BreathState::INHALATION) && m_pos_degrees <= kOpenPosition_deg)
     {
-      Serial.write("Starting inhalation at: ");
-      Serial.println(now, DEC);
+      // Serial.write("Starting inhalation at: ");
+      // Serial.println(now, DEC);
       breath_state = BreathState::INHALATION;
       closed_position_deg = next_closed_position_deg;
     }
     else if ((breath_state != BreathState::EXHALATION) && (m_pos_degrees >= closed_position_deg))
     {
-      Serial.write("Starting exhalation at: ");
-      Serial.println(now, DEC);
+      // Serial.write("Starting exhalation at: ");
+      // Serial.println(now, DEC);
       breath_state = BreathState::EXHALATION;
     }
 
