@@ -34,7 +34,7 @@ public:
   }
 
   uint32_t pin;
-  CircularBuffer<float, 60, true> buffer;
+  CircularBuffer<float, 120, true> buffer;
   float m;
   float b;
   float offset;
