@@ -8,6 +8,7 @@
 #include "winch.h"
 #include "current_sensor.h"
 #include "pins.h"
+#include "ad7780.h"
 
 enum class Modes
 {
@@ -27,6 +28,7 @@ constexpr Modes mode = Modes::RATE;
 
 constexpr uint32_t kCurrentUpdatePeriod_ms = 1;
 constexpr uint32_t kServoUpdatePeriod_ms = 20; // Match the 50 freq of the servo motors
+constexpr uint32_t kMeasurementUpdatePeriod_ms = 100; // Match the 50 freq of the servo motors
 
 // Configuration parameters
 // ! EDIT theses as needed
@@ -43,6 +45,8 @@ constexpr bool kInvertMotion = true; // Change this is the motor is inverted. Th
 BreathState breath_state = BreathState::IDLE;
 Winch winch(servo_pin);
 CurrentSensor current_sensor(current_pin);
+AD7780 pressure(9);
+AD7780 load_cell(8);
 
 void setup()
 {
@@ -53,8 +57,9 @@ void setup()
   digitalWrite(red_led_pin, HIGH);
   digitalWrite(green_led_pin, HIGH);
 
-  winch.invert = kInvertMotion;
-  winch.init();
+  load_cell.init();
+  pressure.init();
+  pressure.measure();
 
   winch.writeDegrees(kIdlePositiong_deg);
 
@@ -73,8 +78,13 @@ void squeeze()
 {
   static uint32_t last_time_ms = millis();
   static uint32_t last_time_current_ms = millis();
+  static uint32_t last_time_meas_ms = millis();
+
   static float m_pos_degrees = kIdlePositiong_deg;
   static float closed_position_deg = kMinClosedPosition_deg;
+  static float load_kg = 0;
+  static float pressure_psi = 0;
+
   uint32_t now = millis();
   // Once a millisecond
   if (abs(now - last_time_current_ms) >= kCurrentUpdatePeriod_ms)
@@ -83,20 +93,38 @@ void squeeze()
     last_time_current_ms = now;
   }
 
-  if (abs(now - last_time_ms) >= kServoUpdatePeriod_ms)
-  {
+  if (abs(now-last_time_meas_ms) >= kMeasurementUpdatePeriod_ms) {
+    if (load_cell.is_measuring) {
+      if (load_cell.update()) {
+        load_kg = (load_cell.read() * 10 / .0033)-.611; // 10kg fullscale at 3.3mV
+
+        pressure.measure();
+      } 
+    }
+    
+    // 14.85mV/psi
+    if (pressure.is_measuring) {
+      if (pressure.update()) {
+        pressure_psi = pressure.read() / .01485;
+        load_cell.measure();
+      } 
+    }
+
     // Print the currents for the current cycle now.
     // Format: time, closed pos, current, position
     // TODO: Move this into it's own task
     Serial.print(now/1000.0, DEC);
     Serial.write(",");
-    Serial.print(closed_position_deg, DEC);
+    Serial.print(load_kg, DEC);
     Serial.write(",");
-    Serial.print(1000*current_sensor.get(), DEC);
+    Serial.print(pressure_psi, DEC);
     Serial.write(",");
-    Serial.print(m_pos_degrees, DEC);
+    Serial.print(motor.encoder.read(), DEC);
     Serial.write("\r\n");
+  }
 
+  if (abs(now - last_time_ms) >= kServoUpdatePeriod_ms)
+  {
     // Read the potentiometer and determine the total length of breath
     float breath_length_ms = map(analogRead(rate_in_pin), 0, 1023, kSlowestBreathTime_ms + 100, kFastestBreathTime_ms);      // scales values
     float next_closed_position_deg = map(analogRead(depth_in_pin), 0, 1023, kMinClosedPosition_deg, kMaxClosedPosition_deg); // scales values
