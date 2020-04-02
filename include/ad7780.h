@@ -1,19 +1,32 @@
 #include <SPI.h>
 
-class AD7780
-{
+class AD7780 {
 private:
     static constexpr uint8_t kGainMask = 0x04;
     static constexpr uint32_t kOffsetBinaryCodeZero = (1 << 23); // 2^23 is the halfway point
 
 public:
-    AD7780() : powerdown_pin(0), use_powerdown(false), m(1), offset(0), b(0) {}
-    AD7780(uint32_t powerdown_pin, float m = 1, float offset = 0, float b = 0) : powerdown_pin(powerdown_pin), use_powerdown(true), vref(3.3), m(m), offset(offset), b(b) {}
+    AD7780()
+        : powerdown_pin(0)
+        , use_powerdown(false)
+        , m(1)
+        , offset(0)
+        , b(0)
+    {
+    }
+    AD7780(uint32_t powerdown_pin, float m = 1, float offset = 0, float b = 0)
+        : powerdown_pin(powerdown_pin)
+        , use_powerdown(true)
+        , vref(3.3)
+        , m(m)
+        , offset(offset)
+        , b(b)
+    {
+    }
 
     void init()
     {
-        if (use_powerdown)
-        {
+        if (use_powerdown) {
             pinMode(powerdown_pin, OUTPUT);
         }
 
@@ -36,8 +49,7 @@ public:
     bool update()
     {
 
-        if (is_ready())
-        {
+        if (is_ready()) {
             SPI.begin();
             SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE2));
 
@@ -54,9 +66,7 @@ public:
 
             volts = convert_to_volts(value, get_gain(code), vref);
             return true;
-        }
-        else
-        {
+        } else {
             return false;
         }
     }
@@ -90,13 +100,10 @@ private:
         pinMode(PIN_SPI_MISO, INPUT);
         pinMode(PIN_SPI_SCK, OUTPUT);
         digitalWrite(PIN_SPI_SCK, HIGH);
-        if (use_powerdown)
-        {
+        if (use_powerdown) {
             digitalWrite(powerdown_pin, LOW);
             is_measuring = false;
-        }
-        else
-        {
+        } else {
             is_measuring = true;
         }
     }

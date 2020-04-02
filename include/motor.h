@@ -7,103 +7,132 @@
 #include <math.h>
 
 struct PIDParams {
-  float Kp;
-  float Ki;
-  float Kd;
+    float Kp;
+    float Ki;
+    float Kd;
+
+    float err_acc;
+    float dT;
 };
 
-float saturate(float val, float min, float max) {
-  if (val < min) {
-    return min;
-  } else if (val > max) {
-    return max;
-  } else {
-    return val;
-  }
-}
-class Motor
+float saturate(float val, float min, float max)
 {
+    if (val < min) {
+        return min;
+    } else if (val > max) {
+        return max;
+    } else {
+        return val;
+    }
+}
+
+class Motor {
 public:
-  Motor(uint32_t pwm, uint32_t dir, uint32_t enca, uint32_t encb, float gear_reduction = 515.63) : 
-    pwm(pwm), //
-    dir(dir), //
-    encoder(enca, encb),
-    mc_pid{1, 0, 0}{
-    pinMode(dir, OUTPUT);
-    digitalWrite(dir, LOW);
-    resolution = 16;
-    analogWriteFrequency(pwm, 10000);
-    analogWriteResolution(resolution);
-    set_pwm(0);
-    encoder.readAndReset();
-    is_first = false;
+    Motor(uint32_t pwm, uint32_t dir, uint32_t enca, uint32_t encb, float gear_reduction = 515.63)
+        : pwm(pwm)
+        , dir(dir)
+        , encoder(enca, encb)
+        , mc_pid {1, 0, 0}
+    {
+        pinMode(dir, OUTPUT);
+        digitalWrite(dir, LOW);
+        resolution = 16;
+        analogWriteFrequency(pwm, 10000);
+        analogWriteResolution(resolution);
+        set_pwm(0);
+        encoder.readAndReset();
+        is_first = false;
+    }
 
-  }
+    void set_pos(float pos)
+    {
+        target_pos = pos;
+    }
 
-  void set_pos(float pos) { target_pos = pos; }
+    void set_velocity(float vel)
+    {
+        target_velocity = vel;
+    }
 
-  void set_velocity(float vel) { target_velocity = vel; }
+    void zero()
+    {
+        raw_pos = 0;
+    }
 
-  void zero() {
-    raw_pos = 0;
-  }
+    void position_controller()
+    {
+        static float err_acc = 0;
 
-  void pos_update() {
-    constexpr float kDT = .001;
-    static float err_acc = 0;
-    if (pos_enabled) {
+        float err = target_pos - position;
+        err_acc += err;
+        set_velocity(8 * err + .2 * period_sec * err_acc);
+    }
 
-      float err = target_pos - position;
-      err_acc += err;
-      set_velocity(8* err + .2* kDT *err_acc);
-  }
-  }
+    float to_rad_at_output(float x)
+    {
+        /// 48 counts per rotation at the input shaft
+        return 2 * M_PI * x / (48) / gear_reduction;
+    }
 
-  void update() {
-    constexpr float kDT = .001;
-    int32_t raw_dp = encoder.readAndReset();
-    raw_pos = raw_pos + raw_dp;
-    float dp_radians = 2 * M_PI * raw_dp / (48) / gear_reduction; // 16 pulses per rotation divided 
-    position = 2 * M_PI * raw_pos / (48) / gear_reduction;
+    void update()
+    {
+        int32_t raw_dp = encoder.readAndReset();
+        raw_pos = raw_pos + raw_dp;
+        position = to_rad_at_output(raw_pos);
 
-    velocity = dp_radians / kDT; // rad / s
-  }
+        // TODO: add a velocity filter
+        velocity = .5 * velocity + .5 * to_rad_at_output(raw_dp) / period_sec; // rad / s <--- Filter this
 
-  void mc_update() {
-    constexpr float kDT = .001;
-    static float err_acc = 0;
+        if (is_pos_enabled) {
+            position_controller();
+        }
+        if (is_speed_enabled) {
+            speed_controller();
+        }
+    }
 
-    float err = target_velocity - velocity;
-    err_acc += err;
-    set_pwm(.8 * err + .01* kDT *err_acc);
-  }
+    void speed_controller()
+    {
+        static float err_acc = 0;
 
-  // -1 to 1
-  void set_pwm(float x) {
-    bool d = (x < 0) ? 1 : 0;
-    int pattern = saturate((float)fabsf(x) * maxPwmValue(), 0, maxPwmValue());
-    digitalWrite(dir, d);
-    analogWrite(pwm, pattern);
-  }
+        float err = target_velocity - velocity;
+        err_acc += err;
+        set_pwm(.8 * err + .01 * period_sec * err_acc);
+    }
 
-  bool is_first;
-  float target_pos = 0;
-  bool pos_enabled=true;
-  float target_velocity = 0;
-  float velocity = 0;
-  float position = 0;
-  float gear_reduction = 515.63;
+    // -1 to 1
+    void set_pwm(float x)
+    {
+        bool d = (x < 0) ? 1 : 0;
+        int pattern = saturate((float)fabsf(x) * maxPwmValue(), 0, maxPwmValue());
+        digitalWrite(dir, d);
+        analogWrite(pwm, pattern);
+    }
 
-  int32_t raw_pos = 0;
-  uint32_t resolution;
-  PIDParams mc_pid;
-  uint32_t last_raw_pos;
-  uint32_t pwm;
-  uint32_t dir;
-  Encoder encoder;
+    bool is_first;
+    float target_pos = 0;
+    bool is_pos_enabled = true;
+    bool is_speed_enabled = true;
+
+    float target_velocity = 0;
+    float velocity = 0;
+    float position = 0;
+    float gear_reduction = 515.63;
+    float period_sec = 0.001;
+
+    int32_t raw_pos = 0;
+    uint32_t resolution;
+    PIDParams mc_pid;
+    uint32_t last_raw_pos;
+    uint32_t pwm;
+    uint32_t dir;
+    Encoder encoder;
 
 private:
-  inline int maxPwmValue() { return ((1 << resolution) - 1); }
+    inline int maxPwmValue()
+    {
+        return ((1 << resolution) - 1);
+    }
 };
 
 #endif // MOTOR_H_
