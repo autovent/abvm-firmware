@@ -7,19 +7,20 @@ class CurrentSensor
 {
 public:
   const float kVDC_V = 3.3;
-  const float kK_A_per_V = 2.5;
-  const float kAdcResolution = 1024;
-
+  const float kK_V_per_A = .02;
+  const uint32_t kAdcResolution = 12;
+  const uint32_t kAdcMaxVal = (1<<kAdcResolution);
+  
   CurrentSensor(uint32_t pin) : pin(pin)
   {
-    b = 0;
-    m = kVDC_V / (kAdcResolution * kK_A_per_V);
-    offset = 0;
+    analogReadResolution(kAdcResolution);
+    m = kVDC_V / kAdcMaxVal / kK_V_per_A;
+    b = m * -.048 /* 48mV */; // offset needs to be configurable probably.
   }
 
   void update()
   {
-    buffer.push(m * (analogRead(pin) + offset) + b);
+    buffer.push(m * analogRead(pin) + b);
   }
 
   float get()
