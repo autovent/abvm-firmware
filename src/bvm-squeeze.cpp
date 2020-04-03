@@ -5,21 +5,12 @@
 
 #include <Servo.h>
 #include <Arduino.h>
-#include "winch.h"
 #include "current_sensor.h"
 #include "pins.h"
 #include "ad7780.h"
 #include "motor.h"
-
-#define MOTION_TYPE_MOTOR 1
-#define MOTION_TYPE_SERVO 0
-#define MOTION_TYPE       MOTION_TYPE_MOTOR
-
-enum class Modes {
-    CALIBRATION,
-    RATE,
-    MOTOR_TEST,
-};
+#define MOTOR_GOBILDA_30RPM
+#include "config.h"
 
 enum class BreathState {
     IDLE,
@@ -28,71 +19,35 @@ enum class BreathState {
     EXHALATION,
 };
 
-constexpr Modes mode = Modes::RATE;
-
-constexpr uint32_t kCurrentUpdatePeriod_ms = 1;
-constexpr uint32_t kPositionUpdate_ms = 20;           // Match the 50 freq of the servo motors
-constexpr uint32_t kMeasurementUpdatePeriod_ms = 100; // Match the 50 freq of the servo motors
-
-// Configuration parameters
-// ! EDIT theses as needed
-constexpr int32_t kSlowestBreathTime_ms = 6250;
-constexpr int32_t kFastestBreathTime_ms = 2400;
-constexpr float kIdlePositiong_deg = 0;
-constexpr float kOpenPosition_deg = 0; // Change this to a value where the servo is just barely compressing the bag
-constexpr float kMinClosedPosition_deg
-    = 40; // Change this to a value where the servo has displaced the appropriate amount.
-constexpr float kMaxClosedPosition_deg
-    = 80; // Change this to a value where the servo has displaced the appropriate amount.
-
-struct IERatio {
-    float inspiration;
-    float expiration;
-
-    const float getInspirationPercent()
-    {
-        return inspiration / (inspiration + expiration);
-    }
-    float getExpirationPercent()
-    {
-        return expiration / (inspiration + expiration);
-    }
-};
-
-// I : E Inspiration to Expiration Ratio
-static IERatio kIERatio = {1, 2};
-constexpr bool kInvertMotion = true; // Change this is the motor is inverted. This will reflect it 180
-
 BreathState breath_state = BreathState::IDLE;
 
 CurrentSensor current_sensor(current_pin);
-AD7780 pressure(9);
-AD7780 load_cell(8);
+AD7780 pressure(pressure_sense_pwdn_pin);
+AD7780 load_cell(load_cell_sense_pwdn_pin);
 
-#if MOTION_TYPE == MOTION_TYPE_MOTOR
-Motor motor(2, 1, 6, 7);
-#else
-Winch winch(servo_pin, 1);
-#endif
+Motor motor(.001f * kCurrentUpdatePeriod_ms,
+            motor_pwm_pin,
+            motor_dir_pin,
+            motor_enca_pin,
+            motor_encb_pin,
+            kMotorParams,
+            kMotorSpeedPidParams,
+            kMotorPosPidParams);
+
+static float m_pos_degrees = 0;
+
+static float breath_length_ms = 0;
+static float closed_position_deg = kMinClosedPosition_deg;
+static bool is_homing = true;
 
 void setup_motor()
 {
+    is_homing = true;
+    motor.is_pos_enabled = false;
     motor.set_velocity(0);
-    pinMode(0, INPUT_PULLUP);
+    pinMode(homing_switch_pin, INPUT_PULLUP);
 }
 
-void setup_servo()
-{
-#if MOTION_TYPE == MOTION_TYPE_SERVO
-
-    winch.invert = kInvertMotion;
-    winch.init();
-
-    winch.writeDegrees(kIdlePositiong_deg);
-#endif
-}
-
-bool is_homing = true;
 void setup()
 {
     Serial.begin(115200);
@@ -106,14 +61,7 @@ void setup()
     pressure.init();
     pressure.measure();
 
-    if (MOTION_TYPE == MOTION_TYPE_MOTOR) {
-        is_homing = true;
-        motor.is_pos_enabled = false;
-        setup_motor();
-    } else {
-        setup_servo();
-        delay(1);
-    }
+    setup_motor();
 }
 
 void calibrate()
@@ -121,18 +69,14 @@ void calibrate()
     float pos_deg = map(analogRead(rate_in_pin), 0, 1023, 600, 2400); // scales values
     Serial.print(pos_deg, DEC);
     Serial.write("\n");
-    // winch.writeMicroseconds(pos_deg);
 }
-static float m_pos_degrees = 0;
-
-float update_rate()
+float update_position()
 {
-    static float closed_position_deg = kMinClosedPosition_deg;
     // Read the potentiometer and determine the total length of breath
-    float breath_length_ms
-        = map(analogRead(rate_in_pin), 0, 1023, kSlowestBreathTime_ms + 100, kFastestBreathTime_ms); // scales values
+    breath_length_ms
+        = map(analogRead(rate_in_pin), 0, 1 << 12, kSlowestBreathTime_ms + 100, kFastestBreathTime_ms); // scales values
     float next_closed_position_deg
-        = map(analogRead(depth_in_pin), 0, 1023, kMinClosedPosition_deg, kMaxClosedPosition_deg); // scales values
+        = map(analogRead(depth_in_pin), 0, 1 << 12, kMinClosedPosition_deg, kMaxClosedPosition_deg); // scales values
 
     if ((breath_state != BreathState::IDLE && breath_length_ms > kSlowestBreathTime_ms + 50)
         || breath_length_ms > kSlowestBreathTime_ms) {
@@ -172,7 +116,7 @@ void loop()
     static uint32_t last_time_meas_ms = millis();
 
     static float load_kg = 0;
-    static float pressure_psi = 0;
+    static float pressure_cmH2O = 0;
 
     uint32_t now = millis();
     // Once a millisecond
@@ -186,7 +130,8 @@ void loop()
         // TODO: cleanup this measurement code
         if (load_cell.is_measuring) {
             if (load_cell.update()) {
-                load_kg = (load_cell.read() * 10 / .0033) - .611; // 10kg fullscale at 3.3mV with a .611 kg offset
+                load_kg
+                    = (load_cell.read() * 10 / .0033) - .611 + .528; // 10kg fullscale at 3.3mV with a .611 kg offset
 
                 pressure.measure();
             }
@@ -195,7 +140,7 @@ void loop()
         if (pressure.is_measuring) {
             if (pressure.update()) {
                 // 14.85mV/psi
-                pressure_psi = pressure.read() / .01485;
+                pressure_cmH2O = (0.24 + pressure.read() / .01485) * 70.306957829636;
                 load_cell.measure();
             }
         }
@@ -206,14 +151,23 @@ void loop()
         Serial.write(",");
         Serial.print(load_kg, DEC);
         Serial.write(",");
-        Serial.print(pressure_psi, DEC);
+        Serial.print(pressure_cmH2O, DEC);
         Serial.write(",");
         Serial.print(motor.velocity, DEC);
         Serial.write(",");
+        Serial.print(motor.target_velocity, DEC);
+        Serial.write(",");
         Serial.print(motor.position, DEC);
         Serial.write(",");
+        Serial.print(motor.target_pos, DEC);
+        Serial.write(",");
         Serial.print(current_sensor.get(), DEC);
-
+        Serial.write(",");
+        Serial.print(breath_length_ms, DEC);
+        Serial.write(",");
+        Serial.print(closed_position_deg, DEC);
+        Serial.write(",");
+        Serial.print(kOpenPosition_deg, DEC);
         Serial.write("\r\n");
         last_time_meas_ms = now;
     }
@@ -222,7 +176,7 @@ void loop()
 
         if (is_homing) {
             // TODO breakout homing into its own routine?
-            motor.set_velocity(-.5);
+            motor.set_velocity(-.3);
             if (!digitalRead(0)) {
                 motor.zero();
                 motor.set_pos(.0001);
@@ -236,7 +190,7 @@ void loop()
                 motor.set_pos(0.01);
             }
 
-            motor.set_pos(2 * PI * update_rate() / 360);
+            motor.set_pos(2 * PI * update_position() / 360);
         }
 
         last_time_ms = now;

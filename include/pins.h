@@ -15,4 +15,8 @@ const uint8_t motor_dir_pin = 1;
 const uint8_t motor_enca_pin = 6;
 const uint8_t motor_encb_pin = 7;
 
+const uint8_t pressure_sense_pwdn_pin = 9;
+const uint8_t load_cell_sense_pwdn_pin = 8;
+
+const uint8_t homing_switch_pin = 0;
 #endif // PINS_H

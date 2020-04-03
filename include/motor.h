@@ -5,39 +5,28 @@
 #include <Encoder.h>
 #include <Arduino.h>
 #include <math.h>
-
-struct PIDParams {
-    float Kp;
-    float Ki;
-    float Kd;
-
-    float err_acc;
-    float dT;
+#include "dsp_math.h"
+#include "pid.h"
+struct MotorParameters {
+    float gear_reduction; // GEAR_REDUCTION : 1
+    float counts_per_rev; // Countable events per rotation at the input shaft
 };
-
-float saturate(float val, float min, float max)
-{
-    if (val < min) {
-        return min;
-    } else if (val > max) {
-        return max;
-    } else {
-        return val;
-    }
-}
 
 class Motor {
 public:
-    Motor(uint32_t pwm, uint32_t dir, uint32_t enca, uint32_t encb, float gear_reduction = 515.63)
-        : pwm(pwm)
-        , dir(dir)
+    Motor(float update_period_s, uint8_t pwm_pin, uint8_t dir_pin, uint8_t enca, uint8_t encb, MotorParameters params, PID::Params speed_pid_params, PID::Params pos_pid_params)
+        : pwm_pin(pwm_pin)
+        , dir_pin(dir_pin)
         , encoder(enca, encb)
-        , mc_pid {1, 0, 0}
+        , motor_parameters(params)
+        , period_s(update_period_s)
+        , speed_pid(speed_pid_params, update_period_s)
+        , pos_pid(pos_pid_params, update_period_s),
+        resolution(12)
     {
-        pinMode(dir, OUTPUT);
-        digitalWrite(dir, LOW);
-        resolution = 16;
-        analogWriteFrequency(pwm, 10000);
+        pinMode(dir_pin, OUTPUT);
+        digitalWrite(dir_pin, LOW);
+        analogWriteFrequency(pwm_pin, 20000);
         analogWriteResolution(resolution);
         set_pwm(0);
         encoder.readAndReset();
@@ -59,45 +48,26 @@ public:
         raw_pos = 0;
     }
 
-    void position_controller()
-    {
-        static float err_acc = 0;
-
-        float err = target_pos - position;
-        err_acc += err;
-        set_velocity(8 * err + .2 * period_sec * err_acc);
-    }
-
     float to_rad_at_output(float x)
     {
-        /// 48 counts per rotation at the input shaft
-        return 2 * M_PI * x / (48) / gear_reduction;
+        return 2 * M_PI * x / (motor_parameters.counts_per_rev) / motor_parameters.gear_reduction;
     }
 
     void update()
     {
         int32_t raw_dp = encoder.readAndReset();
         raw_pos = raw_pos + raw_dp;
-        position = to_rad_at_output(raw_pos);
+        position = .1 * position + .9 * to_rad_at_output(raw_pos);
 
         // TODO: add a velocity filter
-        velocity = .5 * velocity + .5 * to_rad_at_output(raw_dp) / period_sec; // rad / s <--- Filter this
+        velocity = .96 * velocity + .04 * to_rad_at_output(raw_dp) / period_s; // rad / s <--- Filter this
 
         if (is_pos_enabled) {
-            position_controller();
+            set_velocity(pos_pid.update(target_pos, position));
         }
         if (is_speed_enabled) {
-            speed_controller();
+            set_pwm(speed_pid.update(target_velocity, velocity));
         }
-    }
-
-    void speed_controller()
-    {
-        static float err_acc = 0;
-
-        float err = target_velocity - velocity;
-        err_acc += err;
-        set_pwm(.8 * err + .01 * period_sec * err_acc);
     }
 
     // -1 to 1
@@ -105,8 +75,8 @@ public:
     {
         bool d = (x < 0) ? 1 : 0;
         int pattern = saturate((float)fabsf(x) * maxPwmValue(), 0, maxPwmValue());
-        digitalWrite(dir, d);
-        analogWrite(pwm, pattern);
+        digitalWrite(dir_pin, d);
+        analogWrite(pwm_pin, pattern);
     }
 
     bool is_first;
@@ -117,15 +87,17 @@ public:
     float target_velocity = 0;
     float velocity = 0;
     float position = 0;
-    float gear_reduction = 515.63;
-    float period_sec = 0.001;
+
+    MotorParameters motor_parameters;
+    PID speed_pid;
+    PID pos_pid;
+
+    float period_s = 0.002;
 
     int32_t raw_pos = 0;
     uint32_t resolution;
-    PIDParams mc_pid;
-    uint32_t last_raw_pos;
-    uint32_t pwm;
-    uint32_t dir;
+    uint32_t pwm_pin;
+    uint32_t dir_pin;
     Encoder encoder;
 
 private:
