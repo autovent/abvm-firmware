@@ -9,7 +9,7 @@
 #include "pins.h"
 #include "ad7780.h"
 #include "motor.h"
-#define MOTOR_GOBILDA_30RPM
+#define MOTOR_ROBOTZONE_16RPM
 #include "config.h"
 
 enum class BreathState {
