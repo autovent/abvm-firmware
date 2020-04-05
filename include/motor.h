@@ -7,6 +7,7 @@
 #include <math.h>
 #include "dsp_math.h"
 #include "pid.h"
+
 struct MotorParameters {
     float gear_reduction; // GEAR_REDUCTION : 1
     float counts_per_rev; // Countable events per rotation at the input shaft
@@ -14,19 +15,27 @@ struct MotorParameters {
 
 class Motor {
 public:
-    Motor(float update_period_s, uint8_t pwm_pin, uint8_t dir_pin, uint8_t enca, uint8_t encb, MotorParameters params, PID::Params speed_pid_params, PID::Params pos_pid_params)
+    Motor(float update_period_s,
+          uint8_t pwm_pin,
+          uint8_t dir_pin,
+          uint8_t enca,
+          uint8_t encb,
+          MotorParameters params,
+          PID::Params speed_pid_params,
+          PID::Params pos_pid_params)
         : pwm_pin(pwm_pin)
         , dir_pin(dir_pin)
         , encoder(enca, encb)
         , motor_parameters(params)
         , period_s(update_period_s)
         , speed_pid(speed_pid_params, update_period_s)
-        , pos_pid(pos_pid_params, update_period_s),
-        resolution(12)
+        , pos_pid(pos_pid_params, update_period_s)
+        , resolution(12)
+        , pwm_freq(100000)
     {
         pinMode(dir_pin, OUTPUT);
         digitalWrite(dir_pin, LOW);
-        analogWriteFrequency(pwm_pin, 20000);
+        analogWriteFrequency(pwm_pin, pwm_freq);
         analogWriteResolution(resolution);
         set_pwm(0);
         encoder.readAndReset();
@@ -48,6 +57,12 @@ public:
         raw_pos = 0;
     }
 
+    void reset()
+    {
+        speed_pid.reset();
+        pos_pid.reset();
+    }
+
     float to_rad_at_output(float x)
     {
         return 2 * M_PI * x / (motor_parameters.counts_per_rev) / motor_parameters.gear_reduction;
@@ -57,7 +72,7 @@ public:
     {
         int32_t raw_dp = encoder.readAndReset();
         raw_pos = raw_pos + raw_dp;
-        position = .1 * position + .9 * to_rad_at_output(raw_pos);
+        position = .2 * position + .8 * to_rad_at_output(raw_pos);
 
         // TODO: add a velocity filter
         velocity = .96 * velocity + .04 * to_rad_at_output(raw_dp) / period_s; // rad / s <--- Filter this
@@ -99,12 +114,13 @@ public:
     uint32_t pwm_pin;
     uint32_t dir_pin;
     Encoder encoder;
-
-private:
+    uint32_t pwm_freq;
     inline int maxPwmValue()
     {
         return ((1 << resolution) - 1);
     }
+
+private:
 };
 
 #endif // MOTOR_H_

@@ -14,9 +14,8 @@
 
 enum class BreathState {
     IDLE,
-    INHALATION,
-    PLATEAU,
-    EXHALATION,
+    INSPIRATION,
+    EXPIRATION,
 };
 
 BreathState breath_state = BreathState::IDLE;
@@ -52,11 +51,13 @@ void setup()
 {
     Serial.begin(115200);
 
-    pinMode(red_led_pin, OUTPUT);
+pinMode(red_led_pin, OUTPUT);
     pinMode(green_led_pin, OUTPUT);
     digitalWrite(red_led_pin, HIGH);
     digitalWrite(green_led_pin, HIGH);
 
+    pinMode(pos_out_pwm_pin, OUTPUT);
+    pinMode(breathstate_out_pin, OUTPUT);
     load_cell.init();
     pressure.init();
     pressure.measure();
@@ -81,11 +82,11 @@ float update_position()
     if ((breath_state != BreathState::IDLE && breath_length_ms > kSlowestBreathTime_ms + 50)
         || breath_length_ms > kSlowestBreathTime_ms) {
         breath_state = BreathState::IDLE;
-    } else if ((breath_state != BreathState::INHALATION) && m_pos_degrees <= kOpenPosition_deg) {
-        breath_state = BreathState::INHALATION;
+    } else if ((breath_state != BreathState::INSPIRATION) && m_pos_degrees <= kOpenPosition_deg) {
+        breath_state = BreathState::INSPIRATION;
         closed_position_deg = next_closed_position_deg;
-    } else if ((breath_state != BreathState::EXHALATION) && (m_pos_degrees >= closed_position_deg)) {
-        breath_state = BreathState::EXHALATION;
+    } else if ((breath_state != BreathState::EXPIRATION) && (m_pos_degrees >= closed_position_deg)) {
+        breath_state = BreathState::EXPIRATION;
     }
 
     switch (breath_state) {
@@ -95,11 +96,11 @@ float update_position()
                 * ((float)kPositionUpdate_ms / (kIERatio.getExpirationPercent() * breath_length_ms));
         }
         break;
-    case BreathState::INHALATION:
+    case BreathState::INSPIRATION:
         m_pos_degrees += (closed_position_deg - kOpenPosition_deg)
             * ((float)kPositionUpdate_ms / (kIERatio.getInspirationPercent() * breath_length_ms));
         break;
-    case BreathState::EXHALATION:
+    case BreathState::EXPIRATION:
         m_pos_degrees += (kOpenPosition_deg - closed_position_deg)
             * ((float)kPositionUpdate_ms / (kIERatio.getExpirationPercent() * breath_length_ms));
         break;
@@ -173,25 +174,44 @@ void loop()
     }
 
     if (abs(now - last_time_ms) >= kPositionUpdate_ms) {
-
-        if (is_homing) {
-            // TODO breakout homing into its own routine?
-            motor.set_velocity(-.3);
-            if (!digitalRead(0)) {
-                motor.zero();
-                motor.set_pos(.0001);
-                motor.is_pos_enabled = true;
-                is_homing = false;
-                m_pos_degrees = 0;
-            }
+        if (!digitalRead(vdc_in_pin)) {
+            is_homing = true;
+            motor.set_velocity(0);
+            motor.set_pwm(0);
+            motor.reset();            
+            breath_state = BreathState::IDLE;
         } else {
-            if (!digitalRead(0)) {
-                motor.zero();
-                motor.set_pos(0.01);
-            }
 
-            motor.set_pos(2 * PI * update_position() / 360);
+            if (is_homing) {
+                motor.is_pos_enabled = false;
+
+                // TODO breakout homing into its own routine?
+                motor.set_velocity(-.14);
+                static uint8_t home_counter = 0;
+                if ((current_sensor.get() > .2f /*A*/)) {
+                    home_counter++;
+                } else {
+                    home_counter = 0;
+                }
+
+                if (home_counter > 20) {
+                    home_counter = 0;
+                    motor.reset();
+                    motor.zero();
+                    motor.set_pos(0);
+                    motor.is_pos_enabled = true;
+                    is_homing = false;
+                    m_pos_degrees = 0;
+                    breath_state = BreathState::IDLE;
+                }
+            } else {
+                motor.set_pos(2 * PI * update_position() / 360);
+
+                analogWrite(pos_out_pwm_pin, (motor.maxPwmValue()+1) * motor.position / (PI/2));
+                digitalWrite(breathstate_out_pin, breath_state == BreathState::INSPIRATION);
+            }
         }
+        
 
         last_time_ms = now;
     }
