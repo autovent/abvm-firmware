@@ -19,4 +19,11 @@ const uint8_t pressure_sense_pwdn_pin = 9;
 const uint8_t load_cell_sense_pwdn_pin = 8;
 
 const uint8_t homing_switch_pin = 0;
+
+const uint8_t pos_out_pwm_pin = 23;
+const uint8_t vel_out_pwm_pin = 22;
+const uint8_t breathstate_out_pin = 21;
+
+const uint8_t vdc_in_pin= 17;
+
 #endif // PINS_H
