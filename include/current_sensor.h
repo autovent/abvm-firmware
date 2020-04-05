@@ -15,7 +15,7 @@ public:
     {
         analogReadResolution(kAdcResolution);
         m = kVDC_V / kAdcMaxVal / kK_V_per_A;
-        b =  -.062 / kK_V_per_A/* 48mV */; // offset needs to be configurable probably.
+        b =  -.038 / kK_V_per_A/* 48mV */; // offset needs to be configurable probably.
     }
 
     void update()

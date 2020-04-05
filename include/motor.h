@@ -30,8 +30,8 @@ public:
         , period_s(update_period_s)
         , speed_pid(speed_pid_params, update_period_s)
         , pos_pid(pos_pid_params, update_period_s)
-        , resolution(12)
-        , pwm_freq(100000)
+        , resolution(10)
+        , pwm_freq(20000)
     {
         pinMode(dir_pin, OUTPUT);
         digitalWrite(dir_pin, LOW);
@@ -75,7 +75,7 @@ public:
         position = .2 * position + .8 * to_rad_at_output(raw_pos);
 
         // TODO: add a velocity filter
-        velocity = .96 * velocity + .04 * to_rad_at_output(raw_dp) / period_s; // rad / s <--- Filter this
+        velocity = .94 * velocity + .06 * to_rad_at_output(raw_dp) / period_s; // rad / s <--- Filter this
 
         if (is_pos_enabled) {
             set_velocity(pos_pid.update(target_pos, position));
