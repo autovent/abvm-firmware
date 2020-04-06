@@ -10,11 +10,14 @@
 #include "current_sensor.h"
 #include "motor.h"
 #include "pins.h"
+#include "trajectory_planner.h"
+
 #define MOTOR_GOBILDA_30RPM
 #include "config.h"
 
 enum class BreathState {
   IDLE,
+  TO_START,
   INSPIRATION,
   EXPIRATION,
 };
@@ -39,10 +42,14 @@ void setup_motor() {
   is_homing = true;
   motor.is_pos_enabled = false;
   motor.set_velocity(0);
+  motor.set_pwm(0);
+  motor.reset();
   pinMode(homing_switch_pin, INPUT_PULLUP);
 }
 
 void setup() {
+  setup_motor();
+
   Serial.begin(115200);
 
   pinMode(red_led_pin, OUTPUT);
@@ -56,7 +63,7 @@ void setup() {
   pressure.init();
   pressure.measure();
 
-  setup_motor();
+  current_sensor.zero();
 }
 
 void calibrate() {
@@ -65,6 +72,43 @@ void calibrate() {
   Serial.print(pos_deg, DEC);
   Serial.write("\n");
 }
+
+TrajectoryPlanner planner({.4, .4}, kPositionUpdate_ms);
+
+float update_position_trap() {
+  // Read the potentiometer and determine the total length of breath
+  breath_length_ms =
+      map(analogRead(rate_in_pin), 0, 1 << 12, kSlowestBreathTime_ms + 100,
+          kFastestBreathTime_ms);  // scales values
+  float next_closed_position_deg =
+      map(analogRead(depth_in_pin), 0, 1 << 12, kMinClosedPosition_deg,
+          kMaxClosedPosition_deg);  // scales values
+
+  if (planner.is_idle() && ((breath_state != BreathState::IDLE &&
+                             breath_length_ms > kSlowestBreathTime_ms + 50) ||
+                            breath_length_ms > kSlowestBreathTime_ms)) {
+    breath_state = BreathState::IDLE;
+    planner.set_next({kIdlePositiong_deg, kTimeToIdle_ms});
+  } else if (breath_state == BreathState::IDLE && planner.is_idle()) {
+    breath_state = BreathState::TO_START;
+
+    planner.set_next({kOpenPosition_deg, kTimeToIdle_ms});
+  } else if ((breath_state != BreathState::INSPIRATION) && planner.is_idle()) {
+    breath_state = BreathState::INSPIRATION;
+    closed_position_deg = next_closed_position_deg;
+
+    planner.set_next({closed_position_deg,
+                      kIERatio.getInspirationPercent() * breath_length_ms});
+  } else if ((breath_state != BreathState::EXPIRATION) && planner.is_idle()) {
+    breath_state = BreathState::EXPIRATION;
+    planner.set_next({kOpenPosition_deg,
+                      kIERatio.getExpirationPercent() * breath_length_ms});
+  }
+
+  m_pos_degrees = planner.run(m_pos_degrees);
+  return m_pos_degrees;
+}
+
 float update_position() {
   // Read the potentiometer and determine the total length of breath
   breath_length_ms =
@@ -176,35 +220,45 @@ void loop() {
   if (abs(now - last_time_ms) >= kPositionUpdate_ms) {
     if (!digitalRead(vdc_in_pin)) {
       is_homing = true;
+      is_homing = true;
+      motor.is_pos_enabled = false;
       motor.set_velocity(0);
       motor.set_pwm(0);
       motor.reset();
       breath_state = BreathState::IDLE;
     } else {
+      if (current_sensor.get() > 5) {
+        motor.faults.overcurrent = true;
+      }
       if (is_homing) {
         motor.is_pos_enabled = false;
 
         // TODO breakout homing into its own routine?
         motor.set_velocity(-.1);
-        static uint8_t home_counter = 0;
-        if ((current_sensor.get() > .1f /*A*/)) {
-          home_counter++;
-        } else {
-          home_counter = 0;
-        }
+        // static uint8_t home_counter = 0;
+        // if ((current_sensor.get() > -0.1f /*A*/)) {
+        //   home_counter++;
+        // } else {
+        //   home_counter = 0;
+        // }
 
-        if (home_counter > 30) {
-          home_counter = 0;
+        // if (home_counter > 30) {
+        //   home_counter = 0;
+        if (!digitalRead(homing_switch_pin)) {
           motor.reset();
           motor.zero();
-          motor.set_pos(0);
+          planner.reset();
+          motor.pos_pid.reset();
           motor.is_pos_enabled = true;
           is_homing = false;
-          m_pos_degrees = 0;
           breath_state = BreathState::IDLE;
+          m_pos_degrees = motor.position;
+          motor.set_pos(motor.position);
+          planner.set_next({kIdlePositiong_deg, kTimeToIdle_ms});
         }
+        // }
       } else {
-        motor.set_pos(2 * PI * update_position() / 360);
+        motor.set_pos(2 * PI * update_position_trap() / 360);
 
         analogWrite(pos_out_pwm_pin,
                     (motor.maxPwmValue() + 1) * motor.position / (PI / 2));
