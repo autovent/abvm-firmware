@@ -14,11 +14,13 @@
  limitations under the License.
 **/
 
+#include <stdio.h>
 #include <trajectory_planner.h>
 #include <unity.h>
-#include <stdio.h>
-TrajectoryPlanner planner({800, -800});
+TrajectoryPlanner planner({.33, .33});
 
+#include <fstream>
+#include <iostream>
 // void setUp(void) {
 // // set stuff up here
 // }
@@ -28,22 +30,48 @@ TrajectoryPlanner planner({800, -800});
 // }
 
 void test_trajectory_planner_run(void) {
-    TEST_ASSERT(planner.is_idle());
+  TEST_ASSERT(planner.is_idle());
 
-    planner.set_next({90, (360 * 20.0/10)/(2*3.14159), .8});
+  std::ofstream log;
+  log.open("/Users/cwoodall/out.csv");
 
-    float ts = 10;
-    for (int i = 0; i < 100; i++) {
-        float pos = planner.run(0);
-        printf("%f, %d\n", pos, (uint32_t)planner.get_state());
-        set_millis(millis() + ts);
-    }
+  planner.set_next({80, 800});
+
+  float ts = 10;
+  float time = 0;
+  float pos = 0;
+  log << "time,pos,vel,vel_max" << std::endl;
+  for (int i = 0; i < 50; i++) {
+    pos = planner.run(pos);
+    time += ts;
+    log << time << "," << pos << "," << planner.v_last << "," << planner.v_max
+        << std::endl;
+  }
+
+  planner.force_next({-100, 900});
+  for (int i = 0; i < 100; i++) {
+    pos = planner.run(pos);
+    time += ts;
+    log << time << "," << pos << "," << planner.v_last << "," << planner.v_max
+        << std::endl;
+  }
+
+  // planner.force_next({20, 800});
+  // for (int i = 0; i < 100; i++) {
+  //     pos = planner.run(pos);
+  //     time += ts;
+  //     log << time << "," << pos << "," << planner.v_last << "," <<
+  //     planner.v_max <<std::endl;
+
+  // }
+
+  log.close();
 }
 
 int main(int argc, char **argv) {
-    UNITY_BEGIN();
-    RUN_TEST(test_trajectory_planner_run);
-    UNITY_END();
+  UNITY_BEGIN();
+  RUN_TEST(test_trajectory_planner_run);
+  UNITY_END();
 
-    return 0;
+  return 0;
 }
