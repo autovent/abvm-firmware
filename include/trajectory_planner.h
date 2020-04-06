@@ -3,6 +3,8 @@
 
 #include <math.h>
 #include <stdint.h>
+#include "dsp_math.h"
+
 class TrajectoryPlanner {
 public:
   enum class State {
@@ -17,7 +19,7 @@ public:
     float time_total;
   };
 
-  struct Parameters {
+  struct Parameters { 
     float t_a_percent;
     float t_d_percent;
   };
@@ -27,9 +29,13 @@ public:
         current{},
         next{},
         dt_ms(dt_ms),
-        t_last_ms(0),
         params(params) {}
 
+  void reset() {
+    state = State::IDLE;
+    is_next_available = false;
+    
+  }
   bool is_idle() { return state == State::IDLE; }
   void set_next(Plan const& p) {
     next = p;
@@ -51,7 +57,7 @@ public:
         t_counts_accel = (int)((params.t_a_percent * current.time_total) / dt_ms);
         t_counts_decel = (int)((params.t_d_percent * current.time_total) / dt_ms);
         t_counts_c = (int)
-            ((current.time_total * (1 - params.t_a_percent - params.t_d_percent)) / dt_ms);
+            ((current.time_total * (saturate(1 - params.t_a_percent - params.t_d_percent, 0, 1))) / dt_ms);
 
         current.time_total = dt_ms * (t_counts_accel + t_counts_decel + t_counts_c);
         // Find the area under the curve and the median
@@ -148,7 +154,6 @@ public:
   float p_last;
 
   uint32_t dt_ms;
-  uint32_t t_last_ms;
 
   int32_t t_counts_total;
 
