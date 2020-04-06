@@ -1,8 +1,8 @@
 #ifndef TRAJECTORY_PLANNER_H_
 #define TRAJECTORY PLANNER_H_
 
+#include <math.h>
 #include <stdint.h>
-#include <Arduino.h>
 class TrajectoryPlanner {
 public:
   enum class State {
@@ -14,40 +14,59 @@ public:
 
   struct Plan {
     float p_target;
-    float v_target;
     float time_total;
   };
 
   struct Parameters {
-    float accel;
-    float decel;
+    float t_a_percent;
+    float t_d_percent;
   };
 
-  TrajectoryPlanner(Parameters params)
-      : state(State::IDLE), current{}, next{}, t_last_ms(0), params(params){}
+  TrajectoryPlanner(Parameters params, uint32_t dt_ms = 10)
+      : state(State::IDLE),
+        current{},
+        next{},
+        dt_ms(dt_ms),
+        t_last_ms(0),
+        params(params) {}
 
   bool is_idle() { return state == State::IDLE; }
-  void set_next(Plan p) {
+  void set_next(Plan const& p) {
     next = p;
     is_next_available = true;
   }
 
-  float run(float pos) {
+  void force_next(Plan const& p) {
+    set_next(p);
+    state = State::IDLE;
+  }
+
+  float run(float pos, float vel) {
     if (state == State::IDLE) {
       if (is_next_available) {
         current = next;
         is_next_available = false;
+        
+        // Discretize the time part of the spline.
+        t_counts_accel = (int)((params.t_a_percent * current.time_total) / dt_ms);
+        t_counts_decel = (int)((params.t_d_percent * current.time_total) / dt_ms);
+        t_counts_c = (int)
+            ((current.time_total * (1 - params.t_a_percent - params.t_d_percent)) / dt_ms);
 
-        // TODO: Add start ?
-        t_accel = (current.v_target) / params.accel;
-        t_decel = current.v_target / params.decel;
-        t_c = current.time_total - (t_accel + t_decel);
-        v_last = 0;
+        current.time_total = dt_ms * (t_counts_accel + t_counts_decel + t_counts_c);
+        // Find the area under the curve and the median
+        float dp = current.p_target - pos;
+
+        // NOTE ON UNITS. v_max, and accel are all discrete and do NOT have a time component.
+        v_max = (dp) / (.5 * t_counts_decel + .5 * t_counts_accel + t_counts_c);
+        accel = (v_max - vel) / t_counts_accel;
+
+        decel = -(v_max) / t_counts_decel;
+
+        v_last = vel;
         p_last = pos;
 
-        t_total = 0;
-
-        t_last_ms = millis();
+        t_counts_total = 0;
 
         state = State::ACCELERATING;
       } else {
@@ -55,23 +74,19 @@ public:
       }
     }
 
-    uint32_t now = millis();
-    float dt = (now - t_last_ms) * .001;
-    t_last_ms = now;
-    float v = current.v_target;
-
+    float v = v_max;
 
     switch (state) {
       case State::ACCELERATING:
-        v = v_last + params.accel * dt;
+        v = v_last + accel ;
         break;
 
       case State::CONSTANT:
-        v = current.v_target;
+        v = v_max;
         break;
 
       case State::DECELERATION:
-        v = v_last + params.decel * dt;
+        v = v_last + decel ;
         break;
 
       case State::IDLE:
@@ -79,39 +94,30 @@ public:
         break;
     }
 
-    //     Serial.println((uint8_t)state, DEC);
-    // Serial.println((float)t_total, DEC);
-    // Serial.println((float)current.v_target, DEC);
-    // Serial.println((float)v, DEC);
-    // Serial.println((float)t_accel, DEC);
-    // Serial.println((float)t_c, DEC);
-    // Serial.println((float)t_decel, DEC);
-
-
-    pos = v * dt + p_last;
+    pos = v  + p_last;
     p_last = pos;
-    t_total += dt;
     v_last = v;
+    t_counts_total += 1;
 
     switch (state) {
       case State::ACCELERATING:
-        if (t_total >= t_accel) {
+        if (t_counts_total >= (t_counts_accel)) {
           state = State::CONSTANT;
-          t_total = 0;
+          t_counts_total = 0;
         }
         break;
 
       case State::CONSTANT:
-        if (t_total >= t_c) {
+        if (t_counts_total >= (t_counts_c)) {
           state = State::DECELERATION;
-          t_total = 0;
+          t_counts_total = 0;
         }
         break;
 
       case State::DECELERATION:
-        if (t_total >= t_decel) {
+        if (t_counts_total >= t_counts_decel) {
           state = State::IDLE;
-          t_total = 0;
+          t_counts_total = 0;
         }
         break;
 
@@ -124,23 +130,27 @@ public:
   }
 
   State get_state() const { return state; }
-private:
+
   State state;
   Plan current;
 
   Plan next;
   bool is_next_available;
 
-  float t_accel;
-  float t_decel;
-  float t_c;
+  int32_t t_counts_accel;
+  int32_t t_counts_decel;
+  int32_t t_counts_c;
+  float v_max;
 
+  float accel;
+  float decel;
   float v_last;
   float p_last;
 
+  uint32_t dt_ms;
   uint32_t t_last_ms;
 
-  float t_total;
+  int32_t t_counts_total;
 
   Parameters params;
 };
