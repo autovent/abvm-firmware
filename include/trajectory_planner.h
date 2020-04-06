@@ -3,6 +3,7 @@
 
 #include <math.h>
 #include <stdint.h>
+
 #include "dsp_math.h"
 
 class TrajectoryPlanner {
@@ -19,22 +20,17 @@ public:
     float time_total;
   };
 
-  struct Parameters { 
+  struct Parameters {
     float t_a_percent;
     float t_d_percent;
   };
 
   TrajectoryPlanner(Parameters params, uint32_t dt_ms = 10)
-      : state(State::IDLE),
-        current{},
-        next{},
-        dt_ms(dt_ms),
-        params(params) {}
+      : state(State::IDLE), current{}, next{}, dt_ms(dt_ms), params(params) {}
 
   void reset() {
     state = State::IDLE;
     is_next_available = false;
-    
   }
   bool is_idle() { return state == State::IDLE; }
   void set_next(Plan const& p) {
@@ -52,18 +48,25 @@ public:
       if (is_next_available) {
         current = next;
         is_next_available = false;
-        
-        // Discretize the time part of the spline.
-        t_counts_accel = (int)((params.t_a_percent * current.time_total) / dt_ms);
-        t_counts_decel = (int)((params.t_d_percent * current.time_total) / dt_ms);
-        t_counts_c = (int)
-            ((current.time_total * (saturate(1 - params.t_a_percent - params.t_d_percent, 0, 1))) / dt_ms);
 
-        current.time_total = dt_ms * (t_counts_accel + t_counts_decel + t_counts_c);
+        // Discretize the time part of the spline.
+        t_counts_accel =
+            (int)((params.t_a_percent * current.time_total) / dt_ms);
+        t_counts_decel =
+            (int)((params.t_d_percent * current.time_total) / dt_ms);
+        t_counts_c =
+            (int)((current.time_total *
+                   (saturate(1 - params.t_a_percent - params.t_d_percent, 0,
+                             1))) /
+                  dt_ms);
+
+        current.time_total =
+            dt_ms * (t_counts_accel + t_counts_decel + t_counts_c);
         // Find the area under the curve and the median
         float dp = current.p_target - pos;
 
-        // NOTE ON UNITS.v_max, and accel are all discrete and do NOT have a time component.
+        // NOTE ON UNITS.v_max, and accel are all discrete and do NOT have a
+        // time component.
         v_max = (dp) / (.5 * t_counts_decel + .5 * t_counts_accel + t_counts_c);
         accel = (v_max) / t_counts_accel;
 
@@ -84,7 +87,7 @@ public:
 
     switch (state) {
       case State::ACCELERATING:
-        v = v_last + accel ;
+        v = v_last + accel;
         break;
 
       case State::CONSTANT:
@@ -92,7 +95,7 @@ public:
         break;
 
       case State::DECELERATION:
-        v = v_last + decel ;
+        v = v_last + decel;
         break;
 
       case State::IDLE:
@@ -100,7 +103,7 @@ public:
         break;
     }
 
-    pos = v  + p_last;
+    pos = v + p_last;
     p_last = pos;
     v_last = v;
     t_counts_total += 1;
