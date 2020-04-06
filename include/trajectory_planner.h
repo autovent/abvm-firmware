@@ -41,7 +41,7 @@ public:
     state = State::IDLE;
   }
 
-  float run(float pos, float vel) {
+  float run(float pos) {
     if (state == State::IDLE) {
       if (is_next_available) {
         current = next;
@@ -57,13 +57,13 @@ public:
         // Find the area under the curve and the median
         float dp = current.p_target - pos;
 
-        // NOTE ON UNITS. v_max, and accel are all discrete and do NOT have a time component.
+        // NOTE ON UNITS.v_max, and accel are all discrete and do NOT have a time component.
         v_max = (dp) / (.5 * t_counts_decel + .5 * t_counts_accel + t_counts_c);
-        accel = (v_max - vel) / t_counts_accel;
+        accel = (v_max) / t_counts_accel;
 
         decel = -(v_max) / t_counts_decel;
 
-        v_last = vel;
+        v_last = 0;
         p_last = pos;
 
         t_counts_total = 0;
