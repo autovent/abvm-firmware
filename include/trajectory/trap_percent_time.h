@@ -6,7 +6,7 @@
 
 #include "dsp_math.h"
 
-class TrajectoryPlanner {
+class Trap_PercentTime {
 public:
   enum class State {
     IDLE,
@@ -25,7 +25,7 @@ public:
     float t_d_percent;
   };
 
-  TrajectoryPlanner(Parameters params, uint32_t dt_ms = 10)
+  Trap_PercentTime(Parameters params, uint32_t dt_ms = 10)
       : state(State::IDLE), current{}, next{}, dt_ms(dt_ms), params(params) {}
 
   void reset() {
@@ -33,6 +33,7 @@ public:
     is_next_available = false;
   }
   bool is_idle() { return state == State::IDLE; }
+
   void set_next(Plan const& p) {
     next = p;
     is_next_available = true;
@@ -65,7 +66,7 @@ public:
         // Find the area under the curve and the median
         float dp = current.p_target - pos;
 
-        // NOTE ON UNITS.v_max, and accel are all discrete and do NOT have a
+        // NOTE ON UNITS: v_max, accel, decel are all discrete and do NOT have a
         // time component.
         v_max = (dp) / (.5 * t_counts_decel + .5 * t_counts_accel + t_counts_c);
         accel = (v_max) / t_counts_accel;
@@ -120,7 +121,7 @@ public:
         if (t_counts_total >= (t_counts_c)) {
           state = State::DECELERATION;
           t_counts_total = 0;
-        }
+      }
         break;
 
       case State::DECELERATION:

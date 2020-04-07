@@ -15,9 +15,9 @@
 **/
 
 #include <stdio.h>
-#include <trajectory_planner.h>
+#include <trajectory/trap_percent_time.h>
 #include <unity.h>
-TrajectoryPlanner planner({.33, .33});
+Trap_PercentTime planner({.33, .33});
 
 #include <fstream>
 #include <iostream>

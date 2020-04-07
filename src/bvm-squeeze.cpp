@@ -10,9 +10,9 @@
 #include "current_sensor.h"
 #include "motor.h"
 #include "pins.h"
-#include "trajectory_planner.h"
+#include "trajectory/trap_percent_time.h"
 
-#define MOTOR_GOBILDA_30RPM
+#define MOTOR_ROBOTZONE_16RPM
 #include "config.h"
 
 enum class BreathState {
@@ -29,8 +29,10 @@ AD7780 pressure(pressure_sense_pwdn_pin);
 AD7780 load_cell(load_cell_sense_pwdn_pin);
 
 Motor motor(.001f * kCurrentUpdatePeriod_ms, motor_pwm_pin, motor_dir_pin,
-            motor_enca_pin, motor_encb_pin, kMotorParams, kMotorSpeedPidParams,
-            kMotorPosPidParams);
+            motor_enca_pin, motor_encb_pin, kMotorParams, kMotorVelPidParams,
+            kMotorVelLimits,
+            kMotorPosPidParams,
+            kMotorPosLimits);
 
 static float m_pos_degrees = 0;
 
@@ -73,7 +75,7 @@ void calibrate() {
   Serial.write("\n");
 }
 
-TrajectoryPlanner planner({.4, .4}, kPositionUpdate_ms);
+Trap_PercentTime planner({.1, .4}, kPositionUpdate_ms);
 
 float update_position_trap() {
   // Read the potentiometer and determine the total length of breath
@@ -234,7 +236,7 @@ void loop() {
         motor.is_pos_enabled = false;
 
         // TODO breakout homing into its own routine?
-        motor.set_velocity(-.1);
+        motor.set_velocity(-.2);
         // static uint8_t home_counter = 0;
         // if ((current_sensor.get() > -0.1f /*A*/)) {
         //   home_counter++;
