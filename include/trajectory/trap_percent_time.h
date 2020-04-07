@@ -70,7 +70,6 @@ public:
         // time component.
         v_max = (dp) / (.5 * t_counts_decel + .5 * t_counts_accel + t_counts_c);
         accel = (v_max) / t_counts_accel;
-
         decel = -(v_max) / t_counts_decel;
 
         v_last = 0;
@@ -121,7 +120,7 @@ public:
         if (t_counts_total >= (t_counts_c)) {
           state = State::DECELERATION;
           t_counts_total = 0;
-      }
+        }
         break;
 
       case State::DECELERATION:
@@ -142,6 +141,8 @@ public:
   State get_state() const { return state; }
 
   State state;
+  int32_t t_counts_total;
+
   Plan current;
 
   Plan next;
@@ -150,16 +151,14 @@ public:
   int32_t t_counts_accel;
   int32_t t_counts_decel;
   int32_t t_counts_c;
-  float v_max;
 
+  float v_max;
   float accel;
   float decel;
   float v_last;
   float p_last;
 
   uint32_t dt_ms;
-
-  int32_t t_counts_total;
 
   Parameters params;
 };

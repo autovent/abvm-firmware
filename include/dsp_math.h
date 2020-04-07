@@ -2,6 +2,7 @@
 #define DSP_MATH_H_
 
 #include <math.h>
+
 constexpr float saturate(float val, float min, float max) {
   // clang-format off
     return (val < min) ? min 
