@@ -14,27 +14,35 @@ struct MotorParameters {
   float counts_per_rev;  // Countable events per rotation at the input shaft
 };
 
+struct Range {
+  float min;
+  float max;
+
+  float saturate(float a) { return ::saturate(a, min, max); }
+};
+
 class Motor {
 public:
   Motor(float update_period_s, uint8_t pwm_pin, uint8_t dir_pin, uint8_t enca,
-        uint8_t encb, MotorParameters params, PID::Params speed_pid_params,
-        PID::Params pos_pid_params)
+        uint8_t encb, MotorParameters params, PID::Params vel_pid_params,
+        Range vel_limits, PID::Params pos_pid_params, Range pos_limits)
       : pwm_pin(pwm_pin),
         dir_pin(dir_pin),
         encoder(enca, encb),
         motor_parameters(params),
         period_s(update_period_s),
-        speed_pid(speed_pid_params, update_period_s),
+        vel_pid(vel_pid_params, update_period_s),
         pos_pid(pos_pid_params, update_period_s),
         resolution(10),
-        pwm_freq(20000) {
+        pwm_freq(20000),
+        pos_limits(pos_limits),
+        vel_limits(vel_limits) {
     pinMode(dir_pin, OUTPUT);
     digitalWrite(dir_pin, LOW);
     analogWriteFrequency(pwm_pin, pwm_freq);
     analogWriteResolution(resolution);
     set_pwm(0);
     encoder.readAndReset();
-    is_first = false;
   }
 
   void set_pos(float pos) { target_pos = pos; }
@@ -44,7 +52,7 @@ public:
   void zero() { raw_pos = 0; }
 
   void reset() {
-    speed_pid.reset();
+    vel_pid.reset();
     pos_pid.reset();
   }
 
@@ -60,44 +68,72 @@ public:
     bool no_encoder;
     bool wrong_dir;
     bool overcurrent;
+    bool excessive_pos_error;
   };
 
   Faults faults = {.no_encoder = false, .wrong_dir = false};
 
-  void update() {
-    int32_t raw_dp = encoder.readAndReset();
-    raw_pos = raw_pos + raw_dp;
-    position = .90 * position + .1 * to_rad_at_output(raw_pos);
-
-    // TODO: add a velocity filter
-    velocity = .97 * velocity + .03 * to_rad_at_output(raw_dp) /
-                                    period_s;  // rad / s <--- Filter this
-
-    if (raw_dp == 0 && pwm_pattern > 300) {
+  bool test_no_encoder_fault(int32_t counts) {
+    if (counts == 0 && pwm_pattern > 300) {
       if (++no_encoder_counts > 20) {
         faults.no_encoder = true;
+        return true;
       }
     } else {
       no_encoder_counts = 0;
     }
 
+    return false;
+  }
+
+  bool test_wrong_direction() {
     if (signof(velocity) != signof(target_velocity) &&
         (fabsf(target_velocity - velocity) > 1)) {
       if (++wrong_dir_counts > 10) {
         faults.wrong_dir = true;
+        return true;
       }
     } else {
       wrong_dir_counts = 0;
     }
+    return false;
+  }
 
-    if (faults.no_encoder || faults.wrong_dir || faults.overcurrent) {
+  bool test_excessive_pos_error() {
+    if (is_pos_enabled && fabsf(target_pos - position) > (PI / 2)) {
+      faults.excessive_pos_error = true;
+      return true;
+    }
+    return false;
+  }
+  void update() {
+    int32_t counts = encoder.readAndReset();
+    raw_pos = raw_pos + counts;
+    position = .90 * position + .1 * to_rad_at_output(raw_pos);
+
+    // TODO: add a velocity filter
+    velocity = .97 * velocity + .03 * to_rad_at_output(counts) /
+                                    period_s;  // rad / s <--- Filter this
+
+    test_no_encoder_fault(counts);
+
+    test_wrong_direction();
+    // test_excessive_pos_error();
+
+
+    if (faults.no_encoder || faults.wrong_dir || faults.overcurrent ||
+        faults.excessive_pos_error) {
       set_pwm(0);
     } else {
       if (is_pos_enabled) {
-        set_velocity(pos_pid.update(target_pos, position));
+        commanded_pos = pos_limits.saturate(target_pos);
+        set_velocity(pos_pid.update(commanded_pos, position));
       }
-      if (is_speed_enabled) {
-        set_pwm(speed_pid.update(target_velocity, velocity));
+
+
+      if (is_vel_enabled) {
+        target_velocity = vel_limits.saturate(target_velocity);
+        set_pwm(vel_pid.update(target_velocity, velocity));
       }
     }
   }
@@ -111,17 +147,25 @@ public:
     analogWrite(pwm_pin, pwm_pattern);
   }
 
-  bool is_first;
-  float target_pos = 0;
   bool is_pos_enabled = true;
-  bool is_speed_enabled = true;
+  bool is_vel_enabled = true;
+
+  float target_pos = 0;
+  float commanded_pos = 0;
 
   float target_velocity = 0;
+  float commanded_velocity = 0;
+
+  Range pos_limits;
+  Range vel_limits;
+
   float velocity = 0;
   float position = 0;
   float pwm_pattern = 0;
+
   MotorParameters motor_parameters;
-  PID speed_pid;
+
+  PID vel_pid;
   PID pos_pid;
 
   float period_s = 0.002;
