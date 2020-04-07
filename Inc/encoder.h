@@ -1,0 +1,18 @@
+#ifndef ENCODER_H
+#define ENCODER_H
+
+#include <stdint.h>
+#include "stm32f1xx_hal_tim.h"
+
+class Encoder {
+public:
+    Encoder(TIM_HandleTypeDef &tim);
+
+    int16_t get();
+    void reset();
+
+private:
+    TIM_HandleTypeDef *htim;
+};
+
+#endif  // ENCODER_H
