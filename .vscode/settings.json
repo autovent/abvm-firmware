@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "tim.h": "c",
+        "stm32f1xx_it.h": "c"
+    }
+}
