@@ -2,11 +2,11 @@
 #define ENCODER_H
 
 #include <stdint.h>
-#include "stm32f1xx_hal_tim.h"
+#include "stm32f1xx_hal.h"
 
 class Encoder {
 public:
-    Encoder(TIM_HandleTypeDef &tim);
+    Encoder(TIM_HandleTypeDef *tim);
 
     int16_t get();
     void reset();

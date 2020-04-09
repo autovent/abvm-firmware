@@ -1,9 +1,7 @@
 #ifndef DRV8873_H
 #define DRV8873_H
 
-#include "stm32f1xx_hal_gpio.h"
-#include "stm32f1xx_hal_spi.h"
-#include "stm32f1xx_hal_tim.h"
+#include "stm32f1xx_hal.h"
 
 #define DRV8873_FAULT_STATUS 0x00  // (RO) |   RSVD    |   FAULT  |   OTW   |   UVLO   |   CPUV   |  OCP     |  TSD   |  OLD   |
 #define DRV8873_DIAG_STATUS  0x01  // (RO) |   OL1     |   OL2    | ITRIP1  |   ITRIP  |   OCP_H1 |  OCP_L1  | OCP_H2 | OCP_L2 |
@@ -122,7 +120,20 @@
 
 class DRV8873 {
 public:
-    DRV8873();
+    DRV8873(
+        GPIO_TypeDef *sleep_port,
+        uint16_t sleep_pin,  
+        GPIO_TypeDef *disable_port,
+        uint16_t disable_pin,
+        GPIO_TypeDef *fault_port,
+        uint16_t fault_pin,
+        TIM_HandleTypeDef *htim,
+        uint32_t tim_channel_pwm1,
+        uint32_t tim_channel_pwm2,
+        SPI_HandleTypeDef *hspi,
+        GPIO_TypeDef *cs_port,
+        uint16_t cs_pin
+    );
 
     void set_current_raw_meas_dma(uint32_t *dma);
     float get_current();
@@ -145,6 +156,10 @@ public:
     uint8_t get_status_reg();
 
 private:
+    static constexpr float VREF = 3.3f;
+    static constexpr float I_MIRROR_RATIO = 1100.0f;
+    static constexpr float R_LOAD = 330.0f;
+
     GPIO_TypeDef *sleep_port;
     uint16_t sleep_pin;
     
@@ -168,5 +183,20 @@ private:
 
     uint8_t run_spi_transaction(bool read, uint8_t reg_addr, uint8_t data);
 };
+
+void test_init(
+    GPIO_TypeDef *sleep_port,
+    uint16_t sleep_pin,
+    GPIO_TypeDef *disable_port,
+    uint16_t disable_pin,
+    GPIO_TypeDef *fault_port,
+    uint16_t fault_pin,
+    TIM_HandleTypeDef *htim,
+    uint32_t tim_channel_pwm1,
+    uint32_t tim_channel_pwm2,
+    SPI_HandleTypeDef *hspi,
+    GPIO_TypeDef *cs_port,
+    uint16_t cs_pin
+);
 
 #endif  // DRV8873_H

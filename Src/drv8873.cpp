@@ -1,9 +1,33 @@
 #include "drv8873.h"
 #include <assert.h>
 
-#define VREF 3.3f
-#define I_MIRROR_RATIO 1100.0f
-#define R_LOAD 330.0f
+
+DRV8873::DRV8873(
+    GPIO_TypeDef *sleep_port,
+    uint16_t sleep_pin,  
+    GPIO_TypeDef *disable_port,
+    uint16_t disable_pin,
+    GPIO_TypeDef *fault_port,
+    uint16_t fault_pin,
+    TIM_HandleTypeDef *htim,
+    uint32_t tim_channel_pwm1,
+    uint32_t tim_channel_pwm2,
+    SPI_HandleTypeDef *hspi,
+    GPIO_TypeDef *cs_port,
+    uint16_t cs_pin
+) :
+    sleep_port(sleep_port),
+    disable_port(disable_port),
+    disable_pin(disable_pin),
+    fault_port(fault_port),
+    fault_pin(fault_pin),
+    htim(htim),
+    tim_channel_pwm1(tim_channel_pwm1),
+    tim_channel_pwm2(tim_channel_pwm2),
+    hspi(hspi),
+    cs_port(cs_port),
+    cs_pin(cs_pin)
+{}
 
 void DRV8873::set_current_raw_meas_dma(uint32_t *dma) {
     current_raw_dma = dma;
