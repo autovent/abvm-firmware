@@ -49,7 +49,10 @@ public:
 
   void set_velocity(float vel) { target_velocity = vel; }
 
-  void zero() { raw_pos = 0; }
+  void zero() {
+    raw_pos = 0;
+    position = 0;
+  }
 
   void reset() {
     vel_pid.reset();
@@ -69,27 +72,32 @@ public:
     bool wrong_dir;
     bool overcurrent;
     bool excessive_pos_error;
+
+    uint32_t to_int() {
+      return ((no_encoder ? 1 : 0) << 0) | ((wrong_dir ? 1 : 0) << 1) |
+             ((overcurrent ? 1 : 0) << 2) |
+             ((excessive_pos_error ? 1 : 0) << 3);
+    }
   };
 
   Faults faults = {.no_encoder = false, .wrong_dir = false};
 
   bool test_no_encoder_fault(int32_t counts) {
-    if (counts == 0 && pwm_pattern > 300) {
-      if (++no_encoder_counts > 20) {
+    if (counts == 0 && pwm_pattern > 500) {
+      if (++no_encoder_counts > 30) {
         faults.no_encoder = true;
         return true;
       }
     } else {
       no_encoder_counts = 0;
     }
-
     return false;
   }
 
   bool test_wrong_direction() {
     if (signof(velocity) != signof(target_velocity) &&
         (fabsf(target_velocity - velocity) > 1)) {
-      if (++wrong_dir_counts > 10) {
+      if (++wrong_dir_counts > 20) {
         faults.wrong_dir = true;
         return true;
       }
@@ -106,20 +114,20 @@ public:
     }
     return false;
   }
+
   void update() {
     int32_t counts = encoder.readAndReset();
     raw_pos = raw_pos + counts;
-    position = .90 * position + .1 * to_rad_at_output(raw_pos);
 
-    // TODO: add a velocity filter
+    // TODO: tested filter library (pull from beta-core)
+    position = .90 * position + .1 * to_rad_at_output(raw_pos);
     velocity = .97 * velocity + .03 * to_rad_at_output(counts) /
                                     period_s;  // rad / s <--- Filter this
 
     test_no_encoder_fault(counts);
 
     test_wrong_direction();
-    // test_excessive_pos_error();
-
+    test_excessive_pos_error();
 
     if (faults.no_encoder || faults.wrong_dir || faults.overcurrent ||
         faults.excessive_pos_error) {
@@ -130,10 +138,15 @@ public:
         set_velocity(pos_pid.update(commanded_pos, position));
       }
 
-
       if (is_vel_enabled) {
-        target_velocity = vel_limits.saturate(target_velocity);
-        set_pwm(vel_pid.update(target_velocity, velocity));
+        if (fabsf(target_velocity - commanded_velocity) > .05) {
+          commanded_velocity =
+              signof(target_velocity - commanded_velocity) * .05;
+        } else {
+          commanded_velocity = target_velocity;
+        }
+        commanded_velocity = vel_limits.saturate(target_velocity);
+        set_pwm(vel_pid.update(commanded_velocity, velocity));
       }
     }
   }
