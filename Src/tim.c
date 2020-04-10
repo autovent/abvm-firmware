@@ -110,11 +110,6 @@ void MX_TIM2_Init(void)
   {
     Error_Handler();
   }
-  sConfigOC.Pulse = 0;
-  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
-  {
-    Error_Handler();
-  }
   HAL_TIM_MspPostInit(&htim2);
 
 }
@@ -290,13 +285,12 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef* timHandle)
   
     __HAL_RCC_GPIOA_CLK_ENABLE();
     /**TIM2 GPIO Configuration    
-    PA2     ------> TIM2_CH3
     PA15     ------> TIM2_CH1 
     */
-    GPIO_InitStruct.Pin = MC_PWM_2_Pin|MC_PWM_1_Pin;
+    GPIO_InitStruct.Pin = MOTOR_PWM_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+    HAL_GPIO_Init(MOTOR_PWM_GPIO_Port, &GPIO_InitStruct);
 
     __HAL_AFIO_REMAP_TIM2_PARTIAL_1();
 
@@ -379,7 +373,7 @@ void HAL_TIM_Encoder_MspDeInit(TIM_HandleTypeDef* tim_encoderHandle)
 /* USER CODE BEGIN 1 */
 
 uint64_t TIM_GetMicros() {
-  return microseconds;
+  return microseconds + __HAL_TIM_GET_COUNTER(&htim3);
 }
 
 void TIM_DelayMicros(uint32_t micros) {
@@ -389,7 +383,7 @@ void TIM_DelayMicros(uint32_t micros) {
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   if (htim->Instance == TIM3) {
-    microseconds += 10;
+    microseconds += __HAL_TIM_GET_COUNTER(&htim3);
   }
 }
 

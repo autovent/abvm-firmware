@@ -9,9 +9,10 @@ DRV8873::DRV8873(
     uint16_t disable_pin,
     GPIO_TypeDef *fault_port,
     uint16_t fault_pin,
+    GPIO_TypeDef *direction_port,
+    uint16_t direction_pin,
     TIM_HandleTypeDef *htim,
-    uint32_t tim_channel_pwm1,
-    uint32_t tim_channel_pwm2,
+    uint32_t tim_channel_pwm,
     SPI_HandleTypeDef *hspi,
     GPIO_TypeDef *cs_port,
     uint16_t cs_pin
@@ -21,9 +22,10 @@ DRV8873::DRV8873(
     disable_pin(disable_pin),
     fault_port(fault_port),
     fault_pin(fault_pin),
+    direction_port(direction_port),
+    direction_pin(direction_pin),
     htim(htim),
-    tim_channel_pwm1(tim_channel_pwm1),
-    tim_channel_pwm2(tim_channel_pwm2),
+    tim_channel_pwm(tim_channel_pwm),
     hspi(hspi),
     cs_port(cs_port),
     cs_pin(cs_pin)
@@ -49,19 +51,20 @@ void DRV8873::set_pwm_enabled(bool enable) {
     }
 }
 
-void DRV8873::set_pwm(pwm_channel pwm_ch, float value) {
+void DRV8873::set_pwm(float value) {
     assert(value >= 0 && value <= 1);
 
     uint32_t max = htim->Init.Period;
     uint32_t pwm = max * value;
 
-    switch (pwm_ch) {
-        case PWM_CHANNEL_1:
-            __HAL_TIM_SET_COMPARE(htim, tim_channel_pwm1, pwm);
-            break;
-        case PWM_CHANNEL_2:
-            __HAL_TIM_SET_COMPARE(htim, tim_channel_pwm2, pwm);
-            break;
+    __HAL_TIM_SET_COMPARE(htim, tim_channel_pwm1, pwm);
+}
+
+void DRV8873::set_direction(motor_direction direction) {
+    if (direction == DIRECTION_FORWARD) {
+        HAL_GPIO_WritePin(direction_port, direction_pin, GPIO_PIN_SET);
+    } else {
+        HAL_GPIO_WritePin(direction_port, direction_pin, GPIO_PIN_RESET);
     }
 }
 

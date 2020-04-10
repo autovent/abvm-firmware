@@ -127,9 +127,10 @@ public:
         uint16_t disable_pin,
         GPIO_TypeDef *fault_port,
         uint16_t fault_pin,
+        GPIO_TypeDef *direction_port,
+        uint16_t direction_pin,
         TIM_HandleTypeDef *htim,
-        uint32_t tim_channel_pwm1,
-        uint32_t tim_channel_pwm2,
+        uint32_t tim_channel_pwm,
         SPI_HandleTypeDef *hspi,
         GPIO_TypeDef *cs_port,
         uint16_t cs_pin
@@ -138,13 +139,15 @@ public:
     void set_current_raw_meas_dma(uint32_t *dma);
     float get_current();
 
-    enum pwm_channel {
-        PWM_CHANNEL_1,
-        PWM_CHANNEL_2,
+    void set_pwm_enabled(bool enabled);
+    void set_pwm(float value);
+
+    enum motor_direction {
+        DIRECTION_FORWARD,
+        DIRECTION_REVERSE,
     };
 
-    void set_pwm_enabled(bool enabled);
-    void set_pwm(pwm_channel pwm_ch, float value);
+    void set_direction(motor_direction direction);
 
     void set_disabled(bool disable);
     void set_sleep(bool sleep);
@@ -169,6 +172,9 @@ private:
     GPIO_TypeDef *fault_port;
     uint16_t fault_pin;
 
+    GPIO_TypeDef *direction_port;
+    uint16_t direction_pin;
+
     TIM_HandleTypeDef *htim;
     uint32_t tim_channel_pwm1;
     uint32_t tim_channel_pwm2;
@@ -183,20 +189,5 @@ private:
 
     uint8_t run_spi_transaction(bool read, uint8_t reg_addr, uint8_t data);
 };
-
-void test_init(
-    GPIO_TypeDef *sleep_port,
-    uint16_t sleep_pin,
-    GPIO_TypeDef *disable_port,
-    uint16_t disable_pin,
-    GPIO_TypeDef *fault_port,
-    uint16_t fault_pin,
-    TIM_HandleTypeDef *htim,
-    uint32_t tim_channel_pwm1,
-    uint32_t tim_channel_pwm2,
-    SPI_HandleTypeDef *hspi,
-    GPIO_TypeDef *cs_port,
-    uint16_t cs_pin
-);
 
 #endif  // DRV8873_H

@@ -123,8 +123,9 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-    abvm_update();
+
     /* USER CODE BEGIN 3 */
+    abvm_update();
   }
   /* USER CODE END 3 */
 }
