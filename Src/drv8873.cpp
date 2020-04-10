@@ -43,11 +43,9 @@ float DRV8873::get_current() {
 
 void DRV8873::set_pwm_enabled(bool enable) {
     if (enable) {
-        HAL_TIM_PWM_Start(htim, tim_channel_pwm1);
-        HAL_TIM_PWM_Start(htim, tim_channel_pwm2);
+        HAL_TIM_PWM_Start(htim, tim_channel_pwm);
     } else {
-        HAL_TIM_PWM_Stop(htim, tim_channel_pwm1);
-        HAL_TIM_PWM_Stop(htim, tim_channel_pwm2);
+        HAL_TIM_PWM_Stop(htim, tim_channel_pwm);
     }
 }
 
@@ -57,7 +55,7 @@ void DRV8873::set_pwm(float value) {
     uint32_t max = htim->Init.Period;
     uint32_t pwm = max * value;
 
-    __HAL_TIM_SET_COMPARE(htim, tim_channel_pwm1, pwm);
+    __HAL_TIM_SET_COMPARE(htim, tim_channel_pwm, pwm);
 }
 
 void DRV8873::set_direction(motor_direction direction) {

@@ -176,8 +176,7 @@ private:
     uint16_t direction_pin;
 
     TIM_HandleTypeDef *htim;
-    uint32_t tim_channel_pwm1;
-    uint32_t tim_channel_pwm2;
+    uint32_t tim_channel_pwm;
 
     SPI_HandleTypeDef *hspi;
     GPIO_TypeDef *cs_port;

@@ -16,8 +16,9 @@ bool USBComm::sendf(const char *fmt, ...) {
     va_start(args, fmt);
     char data[MAX_PACKET_SIZE];
     vsnprintf(data, sizeof(data), fmt, args);
-    send((uint8_t*)data, sizeof(data));
+    bool result = send((uint8_t*)data, sizeof(data));
     va_end(args);
+    return result;
 }
 
 size_t USBComm::receiveLine(uint8_t **data) {
