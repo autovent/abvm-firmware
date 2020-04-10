@@ -50,6 +50,11 @@ public:
         current = next;
         is_next_available = false;
 
+        if (dt_ms == 0 || current.time_total <= dt_ms) {
+          state = State::IDLE;
+          return p_last;
+        }
+
         // Discretize the time part of the spline.
         t_counts_accel =
             (int)((params.t_a_percent * current.time_total) / dt_ms);
@@ -69,8 +74,15 @@ public:
         // NOTE ON UNITS: v_max, accel, decel are all discrete and do NOT have a
         // time component.
         v_max = (dp) / (.5 * t_counts_decel + .5 * t_counts_accel + t_counts_c);
-        accel = (v_max) / t_counts_accel;
-        decel = -(v_max) / t_counts_decel;
+
+        // Protect from divide by zero
+        if (t_counts_accel == 0 || t_counts_decel == 0) {
+          state = State::IDLE;
+          return p_last;
+        }
+        
+        accel = v_max / t_counts_accel;
+        decel = -v_max / t_counts_decel;
 
         v_last = 0;
         p_last = pos;
@@ -83,59 +95,43 @@ public:
       }
     }
 
-    float v = v_max;
-
+    float v = 0;
     switch (state) {
       case State::ACCELERATING:
         v = v_last + accel;
+        if (++t_counts_total >= (t_counts_accel)) {
+          state = State::CONSTANT;
+          t_counts_total = 0;
+        }
+
         break;
 
       case State::CONSTANT:
         v = v_max;
+        if (++t_counts_total >= (t_counts_c)) {
+          state = State::DECELERATION;
+          t_counts_total = 0;
+        }
+
         break;
 
       case State::DECELERATION:
         v = v_last + decel;
-        break;
-
-      case State::IDLE:
-      default:
-        break;
-    }
-
-    pos = v + p_last;
-    p_last = pos;
-    v_last = v;
-    t_counts_total += 1;
-
-    switch (state) {
-      case State::ACCELERATING:
-        if (t_counts_total >= (t_counts_accel)) {
-          state = State::CONSTANT;
-          t_counts_total = 0;
-        }
-        break;
-
-      case State::CONSTANT:
-        if (t_counts_total >= (t_counts_c)) {
-          state = State::DECELERATION;
-          t_counts_total = 0;
-        }
-        break;
-
-      case State::DECELERATION:
-        if (t_counts_total >= t_counts_decel) {
+        if (++t_counts_total >= t_counts_decel) {
           state = State::IDLE;
           t_counts_total = 0;
         }
         break;
 
-      default:
       case State::IDLE:
+      default:
         break;
     }
 
-    return pos;
+    p_last = v + p_last;
+    v_last = v;
+
+    return p_last;
   }
 
   State get_state() const { return state; }
