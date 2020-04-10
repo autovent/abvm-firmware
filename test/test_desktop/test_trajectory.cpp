@@ -16,9 +16,11 @@
 
 #include <stdio.h>
 #include <trajectory/trap_percent_time.h>
-#include <unity.h>
-Trap_PercentTime planner({.33, .33});
+#include <trajectory/trap_accel_max.h>
 
+#include <unity.h>
+Trap_PercentTime planner({.33, 0});
+// Trap_FixedAccelVel planner({.4, .4, 10});
 #include <fstream>
 #include <iostream>
 // void setUp(void) {
@@ -41,7 +43,7 @@ void test_trajectory_planner_run(void) {
   float time = 0;
   float pos = 0;
   log << "time,pos,vel,vel_max" << std::endl;
-  for (int i = 0; i < 50; i++) {
+  for (int i = 0; i < 100; i++) {
     pos = planner.run(pos);
     time += ts;
     log << time << "," << pos << "," << planner.v_last << "," << planner.v_max
