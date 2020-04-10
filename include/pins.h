@@ -22,6 +22,7 @@ const uint8_t homing_switch_pin = 22;
 
 const uint8_t pos_out_pwm_pin = 23;
 const uint8_t breathstate_out_pin = 21;
+const uint8_t plateau_out_pin = 20;
 
 const uint8_t vdc_in_pin= 17;
 
