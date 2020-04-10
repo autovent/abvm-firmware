@@ -50,6 +50,7 @@ extern "C"
 void abvm_init() {
     encoder.reset();
     usb_comm.setAsCDCConsumer();
+    usb_comm.sendf("ABVM (autovent.org)");
 }
 
 extern "C"

@@ -7,7 +7,9 @@ class USBComm {
 public:
     USBComm();
 
-    bool sendLine(uint8_t *data, size_t len);
+    bool send(uint8_t *data, size_t len);
+
+    bool sendf(const char *fmt, ...);
 
     size_t receiveLine(uint8_t **data);
 

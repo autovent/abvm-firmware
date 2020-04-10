@@ -1,13 +1,23 @@
 #include "usb_comm.h"
 #include "usbd_cdc_if.h"
+#include <stdarg.h>
 
 USBComm::USBComm() : 
     idxFirst(0), idxCurrent(0)
 {}
 
-bool USBComm::sendLine(uint8_t *data, size_t len) {
+bool USBComm::send(uint8_t *data, size_t len) {
     if (len > MAX_PACKET_SIZE) return false;
     return CDC_Transmit_FS(data, len) == USBD_OK;
+}
+
+bool USBComm::sendf(const char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    char data[MAX_PACKET_SIZE];
+    vsnprintf(data, sizeof(data), fmt, args);
+    send((uint8_t*)data, sizeof(data));
+    va_end(args);
 }
 
 size_t USBComm::receiveLine(uint8_t **data) {
