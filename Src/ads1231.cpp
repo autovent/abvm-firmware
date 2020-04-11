@@ -26,6 +26,16 @@ ADS1231::ADS1231(GPIO_TypeDef *powerdown_port, uint32_t powerdown_pin, SPI_Handl
     b(b)
 {}
 
+void ADS1231::init() {
+    //HAL_SPI_DeInit(hspi);
+    GPIO_InitTypeDef init;
+    init.Pin = miso_pin;
+    init.Mode = GPIO_MODE_INPUT;
+    init.Pull = GPIO_PULLDOWN;
+    init.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(miso_port, &init);
+}
+
 float ADS1231::read_volts() {
     return volts;
 }
@@ -40,7 +50,11 @@ float ADS1231::read() {
 bool ADS1231::update() {
     if (is_ready()) {
         uint8_t data[3];
+        //HAL_SPI_Init(hspi);
         HAL_SPI_Receive(hspi, data, sizeof(data), SPI_TIMEOUT);
+        //HAL_SPI_DeInit(hspi);
+
+        //HAL_GPIO_WritePin(sclk_port, sclk_pin, GPIO_PIN_RESET);
 
         TIM_DelayMicros(200);
         HAL_GPIO_WritePin(sclk_port, sclk_pin, GPIO_PIN_SET);

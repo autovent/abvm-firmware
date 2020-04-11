@@ -3,6 +3,7 @@
 #include "ads1231.h"
 #include "encoder.h"
 #include "usb_comm.h"
+#include "control_panel.h"
 #include "main.h"
 #include "spi.h"
 #include "tim.h"
@@ -34,10 +35,9 @@ DRV8873 motor_driver(
     MC_DISABLE_Pin,
     MC_FAULT_GPIO_Port,
     MC_FAULT_Pin,
-    MC_DIRECTION_GPIO_Port,
-    MC_DIRECTION_Pin,
     &htim2,
     TIM_CHANNEL_1,
+    TIM_CHANNEL_3,
     &hspi2,
     MC_SPI_CS_GPIO_Port,
     MC_SPI_CS_Pin
@@ -47,15 +47,106 @@ Encoder encoder(&htim4);
 
 USBComm usb_comm;
 
+ControlPanel controls(
+    SW_START_GPIO_Port,
+    SW_START_Pin,
+    SW_STOP_GPIO_Port,
+    SW_STOP_Pin,
+    SW_VOL_UP_GPIO_Port,
+    SW_VOL_UP_Pin,
+    SW_VOL_DN_GPIO_Port,
+    SW_VOL_DN_Pin,
+    SW_RATE_UP_GPIO_Port,
+    SW_RATE_UP_Pin,
+    SW_RATE_DN_GPIO_Port,
+    SW_RATE_DN_Pin,
+    LED_POWER_GPIO_Port,
+    LED_POWER_Pin,
+    LED_FAULT_GPIO_Port,
+    LED_FAULT_Pin,
+    LED_IN_GPIO_Port,
+    LED_IN_Pin,
+    LED_OUT_GPIO_Port,
+    LED_OUT_Pin,
+    VOL_CHAR_1_GPIO_Port,
+    VOL_CHAR_1_Pin,
+    VOL_CHAR_2_GPIO_Port,
+    VOL_CHAR_2_Pin,
+    VOL_CHAR_3_GPIO_Port,
+    VOL_CHAR_3_Pin,
+    RATE_CHAR_1_GPIO_Port,
+    RATE_CHAR_1_Pin,
+    RATE_CHAR_2_GPIO_Port,
+    RATE_CHAR_2_Pin,
+    RATE_CHAR_3_GPIO_Port,
+    RATE_CHAR_3_Pin,
+    &htim1,
+    TIM_CHANNEL_1
+);
+
+void control_panel_self_test() {
+    controls.set_status_led(ControlPanel::STATUS_LED_1, true);
+    controls.set_status_led(ControlPanel::STATUS_LED_2, true);
+    controls.set_status_led(ControlPanel::STATUS_LED_3, true);
+    controls.set_status_led(ControlPanel::STATUS_LED_4, true);
+    controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_LEFT, ControlPanel::LEVEL_1);
+    controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_RIGHT, ControlPanel::LEVEL_6);
+
+    controls.set_buzzer_tone(ControlPanel::BUZZER_C7);
+    controls.set_buzzer_volume(1);
+    controls.sound_buzzer(true);
+    HAL_Delay(100);
+    controls.set_buzzer_tone(ControlPanel::BUZZER_G7);
+    HAL_Delay(100);
+    controls.set_buzzer_tone(ControlPanel::BUZZER_E7);
+    HAL_Delay(100);
+    controls.set_buzzer_tone(ControlPanel::BUZZER_C8);
+    HAL_Delay(100);
+    controls.sound_buzzer(false);
+
+    controls.set_status_led(ControlPanel::STATUS_LED_1, false);
+    controls.set_status_led(ControlPanel::STATUS_LED_2, false);
+    controls.set_status_led(ControlPanel::STATUS_LED_3, false);
+    controls.set_status_led(ControlPanel::STATUS_LED_4, false);
+    controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_LEFT, ControlPanel::OFF);
+    controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_RIGHT, ControlPanel::OFF);
+}
+
 extern "C"
 void abvm_init() {
     encoder.reset();
     usb_comm.setAsCDCConsumer();
     usb_comm.sendf("AutoVENT ABVM (autovent.org)");
+
+    load_cell.init();
+    
+    control_panel_self_test();
+
+    motor_driver.init();
+    motor_driver.set_direction(DRV8873::DIRECTION_FORWARD);
+    motor_driver.set_pwm(0.2);
+    motor_driver.set_sleep(false);
+    motor_driver.set_disabled(false);
+    motor_driver.set_pwm_enabled(true);
+
+    load_cell.set_powerdown(true);
+    HAL_Delay(10);
+    load_cell.set_powerdown(false);
 }
+
+uint32_t last = 0;
+uint32_t interval = 1000;
 
 extern "C"
 void abvm_update() {
     pressure_sensor.update();
     load_cell.update();
+    // controls.update();
+
+    volatile float x = load_cell.read();
+
+    // if (HAL_GetTick() > last + interval) {
+    //     volatile uint8_t reg = motor_driver.get_reg(DRV8873_FAULT_STATUS);
+    //     last = HAL_GetTick();
+    // }
 }

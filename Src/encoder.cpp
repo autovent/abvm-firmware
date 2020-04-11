@@ -2,8 +2,9 @@
 
 #define HALFWAY 32768
 
-Encoder::Encoder(TIM_HandleTypeDef *tim) {
-    htim = tim;
+Encoder::Encoder(TIM_HandleTypeDef *tim) : htim(tim) {}
+
+void Encoder::init() {
     reset();
     HAL_TIM_Encoder_Start(htim, TIM_CHANNEL_ALL);
 }

@@ -8,6 +8,8 @@ class Encoder {
 public:
     Encoder(TIM_HandleTypeDef *tim);
 
+    void init();
+
     int16_t get();
     void reset();
 

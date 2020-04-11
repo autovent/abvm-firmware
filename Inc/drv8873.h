@@ -127,14 +127,15 @@ public:
         uint16_t disable_pin,
         GPIO_TypeDef *fault_port,
         uint16_t fault_pin,
-        GPIO_TypeDef *direction_port,
-        uint16_t direction_pin,
         TIM_HandleTypeDef *htim,
-        uint32_t tim_channel_pwm,
+        uint32_t tim_channel_pwm1,
+        uint32_t tim_channel_pwm2,
         SPI_HandleTypeDef *hspi,
         GPIO_TypeDef *cs_port,
         uint16_t cs_pin
     );
+    
+    void init();
 
     void set_current_raw_meas_dma(uint32_t *dma);
     float get_current();
@@ -147,7 +148,7 @@ public:
         DIRECTION_REVERSE,
     };
 
-    void set_direction(motor_direction direction);
+    void set_direction(motor_direction dir);
 
     void set_disabled(bool disable);
     void set_sleep(bool sleep);
@@ -172,11 +173,9 @@ private:
     GPIO_TypeDef *fault_port;
     uint16_t fault_pin;
 
-    GPIO_TypeDef *direction_port;
-    uint16_t direction_pin;
-
     TIM_HandleTypeDef *htim;
-    uint32_t tim_channel_pwm;
+    uint32_t tim_channel_pwm1;
+    uint32_t tim_channel_pwm2;
 
     SPI_HandleTypeDef *hspi;
     GPIO_TypeDef *cs_port;
@@ -185,6 +184,8 @@ private:
     uint32_t *current_raw_dma;
 
     uint8_t status_reg;
+
+    motor_direction direction;
 
     uint8_t run_spi_transaction(bool read, uint8_t reg_addr, uint8_t data);
 };

@@ -9,10 +9,9 @@ DRV8873::DRV8873(
     uint16_t disable_pin,
     GPIO_TypeDef *fault_port,
     uint16_t fault_pin,
-    GPIO_TypeDef *direction_port,
-    uint16_t direction_pin,
     TIM_HandleTypeDef *htim,
-    uint32_t tim_channel_pwm,
+    uint32_t tim_channel_pwm1,
+    uint32_t tim_channel_pwm2,
     SPI_HandleTypeDef *hspi,
     GPIO_TypeDef *cs_port,
     uint16_t cs_pin
@@ -22,14 +21,17 @@ DRV8873::DRV8873(
     disable_pin(disable_pin),
     fault_port(fault_port),
     fault_pin(fault_pin),
-    direction_port(direction_port),
-    direction_pin(direction_pin),
     htim(htim),
-    tim_channel_pwm(tim_channel_pwm),
+    tim_channel_pwm1(tim_channel_pwm1),
+    tim_channel_pwm2(tim_channel_pwm2),
     hspi(hspi),
     cs_port(cs_port),
     cs_pin(cs_pin)
 {}
+
+void DRV8873::init() {
+    HAL_GPIO_WritePin(cs_port, cs_pin, GPIO_PIN_SET);
+}
 
 void DRV8873::set_current_raw_meas_dma(uint32_t *dma) {
     current_raw_dma = dma;
@@ -43,9 +45,11 @@ float DRV8873::get_current() {
 
 void DRV8873::set_pwm_enabled(bool enable) {
     if (enable) {
-        HAL_TIM_PWM_Start(htim, tim_channel_pwm);
+        HAL_TIM_PWM_Start(htim, tim_channel_pwm1);
+        HAL_TIM_PWM_Start(htim, tim_channel_pwm2);
     } else {
-        HAL_TIM_PWM_Stop(htim, tim_channel_pwm);
+        HAL_TIM_PWM_Stop(htim, tim_channel_pwm1);
+        HAL_TIM_PWM_Stop(htim, tim_channel_pwm2);
     }
 }
 
@@ -55,15 +59,18 @@ void DRV8873::set_pwm(float value) {
     uint32_t max = htim->Init.Period;
     uint32_t pwm = max * value;
 
-    __HAL_TIM_SET_COMPARE(htim, tim_channel_pwm, pwm);
+    if (direction == DIRECTION_FORWARD) {
+        __HAL_TIM_SET_COMPARE(htim, tim_channel_pwm1, pwm);
+        __HAL_TIM_SET_COMPARE(htim, tim_channel_pwm2, max);
+    } else {
+        __HAL_TIM_SET_COMPARE(htim, tim_channel_pwm2, pwm);
+        __HAL_TIM_SET_COMPARE(htim, tim_channel_pwm1, max);
+    }
 }
 
-void DRV8873::set_direction(motor_direction direction) {
-    if (direction == DIRECTION_FORWARD) {
-        HAL_GPIO_WritePin(direction_port, direction_pin, GPIO_PIN_SET);
-    } else {
-        HAL_GPIO_WritePin(direction_port, direction_pin, GPIO_PIN_RESET);
-    }
+void DRV8873::set_direction(motor_direction dir) {
+    if (dir == DIRECTION_FORWARD) direction = DIRECTION_FORWARD;
+    else if (dir == DIRECTION_REVERSE) direction = DIRECTION_REVERSE;
 }
 
 void DRV8873::set_disabled(bool disable) {
@@ -101,7 +108,9 @@ uint8_t DRV8873::get_status_reg() {
 uint8_t DRV8873::run_spi_transaction(bool read, uint8_t reg_addr, uint8_t data) {
     uint8_t tx_data[2] = {((read & 0x1) << 6) | ((reg_addr & 0x1F) << 1), data};
     uint8_t rx_data[2] = {0};
+    //HAL_GPIO_WritePin(cs_port, cs_pin, GPIO_PIN_RESET);
     HAL_SPI_TransmitReceive(hspi, tx_data, rx_data, sizeof(tx_data), 100);
+    //HAL_GPIO_WritePin(cs_port, cs_pin, GPIO_PIN_SET);
     status_reg = rx_data[0];
     return rx_data[1];
 }

@@ -8,6 +8,8 @@ public:
         GPIO_TypeDef *miso_port, uint32_t miso_pin, GPIO_TypeDef *sclk_port, uint32_t sclk_pin,
         float m = 1, float offset = 0, float b = 0);
 
+    void init();
+
     float read_volts();
 
     float read();
