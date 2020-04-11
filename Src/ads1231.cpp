@@ -27,7 +27,7 @@ ADS1231::ADS1231(GPIO_TypeDef *powerdown_port, uint32_t powerdown_pin, SPI_Handl
 {}
 
 void ADS1231::init() {
-    //HAL_SPI_DeInit(hspi);
+    HAL_SPI_DeInit(hspi);
     GPIO_InitTypeDef init;
     init.Pin = miso_pin;
     init.Mode = GPIO_MODE_INPUT;
@@ -50,15 +50,13 @@ float ADS1231::read() {
 bool ADS1231::update() {
     if (is_ready()) {
         uint8_t data[3];
-        //HAL_SPI_Init(hspi);
+        enable_spi(true);
         HAL_SPI_Receive(hspi, data, sizeof(data), SPI_TIMEOUT);
-        //HAL_SPI_DeInit(hspi);
+        enable_spi(false);
 
-        //HAL_GPIO_WritePin(sclk_port, sclk_pin, GPIO_PIN_RESET);
-
-        TIM_DelayMicros(200);
+        TIM_DelayMicros(1);
         HAL_GPIO_WritePin(sclk_port, sclk_pin, GPIO_PIN_SET);
-        TIM_DelayMicros(200);
+        TIM_DelayMicros(1);
         HAL_GPIO_WritePin(sclk_port, sclk_pin, GPIO_PIN_RESET);
 
         int32_t value = (data[0] << 16) | (data[1] << 8) | (data[2]);
@@ -89,5 +87,45 @@ void ADS1231::set_powerdown(bool pwrdn) {
         HAL_GPIO_WritePin(powerdown_port, powerdown_pin, GPIO_PIN_RESET);
     } else {
         HAL_GPIO_WritePin(powerdown_port, powerdown_pin, GPIO_PIN_SET);
+    }
+}
+
+void ADS1231::enable_spi(bool spi_on) {
+    if (spi_on) {
+        HAL_SPI_Init(hspi);
+
+        GPIO_InitTypeDef gpio_init;
+
+        gpio_init.Pin = miso_pin;
+        gpio_init.Mode = GPIO_MODE_INPUT;
+        gpio_init.Pull = GPIO_NOPULL;
+        gpio_init.Speed = GPIO_SPEED_FREQ_LOW;
+        HAL_GPIO_Init(miso_port, &gpio_init);
+
+        gpio_init.Pin = sclk_pin;
+        gpio_init.Mode = GPIO_MODE_AF_PP;
+        gpio_init.Pull = GPIO_NOPULL;
+        gpio_init.Speed = GPIO_SPEED_FREQ_LOW;
+
+        HAL_GPIO_Init(sclk_port, &gpio_init);
+    } else {
+        HAL_SPI_DeInit(hspi);
+
+        GPIO_InitTypeDef gpio_init;
+
+        gpio_init.Pin = miso_pin;
+        gpio_init.Mode = GPIO_MODE_INPUT;
+        gpio_init.Pull = GPIO_PULLDOWN;
+        gpio_init.Speed = GPIO_SPEED_FREQ_LOW;
+        HAL_GPIO_Init(miso_port, &gpio_init);
+
+        gpio_init.Pin = sclk_pin;
+        gpio_init.Mode = GPIO_MODE_OUTPUT_PP;
+        gpio_init.Pull = GPIO_PULLDOWN;
+        gpio_init.Speed = GPIO_SPEED_FREQ_LOW;
+
+        HAL_GPIO_Init(sclk_port, &gpio_init);
+
+        HAL_GPIO_WritePin(sclk_port, sclk_pin, GPIO_PIN_RESET);
     }
 }

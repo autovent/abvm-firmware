@@ -112,7 +112,9 @@ bool ControlPanel::button_pressed(panel_button btn) {
             return false;
     }
 
-    return HAL_GPIO_ReadPin(port, pin) == GPIO_PIN_RESET;
+    volatile GPIO_PinState state = HAL_GPIO_ReadPin(port, pin);
+
+    return state == GPIO_PIN_RESET;
 }
 
 void ControlPanel::set_status_led(status_led led, bool val) {

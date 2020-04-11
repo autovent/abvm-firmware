@@ -3,12 +3,12 @@
 
 #include "stm32f1xx_hal.h"
 
-#define DRV8873_FAULT_STATUS 0x00  // (RO) |   RSVD    |   FAULT  |   OTW   |   UVLO   |   CPUV   |  OCP     |  TSD   |  OLD   |
-#define DRV8873_DIAG_STATUS  0x01  // (RO) |   OL1     |   OL2    | ITRIP1  |   ITRIP  |   OCP_H1 |  OCP_L1  | OCP_H2 | OCP_L2 |
-#define DRV8873_IC1_CONTROL  0x02  // (RW) |          TOFF        | SPI_IN  |           SR                   |       MODE      |
-#define DRV8873_IC2_CONTROL  0x03  // (RW) | ITRIP_REP | TSD_MODE | OTW_REP | DIS_CPUV |      OCP_TRETRY     |     OCP_MODE    |
-#define DRV8873_IC3_CONTROL  0x04  // (RW) |  CLR_FLT  |             LOCK              | OUT2_DIS | OUT2_DIS | EN_IN1 | PH_IN2 |
-#define DRV8873_IC4_CONTROL  0x05  // (RW) |   RSVD    |  EN_OLP  | OLP_DLY |  EN_OLA  |      ITRIP_LVL      |    DIS_ITRIP    |
+#define DRV8873_REG_FAULT_STATUS 0x00  // (RO) |   RSVD    |   FAULT  |   OTW   |   UVLO   |   CPUV   |  OCP     |  TSD   |  OLD   |
+#define DRV8873_REG_DIAG_STATUS  0x01  // (RO) |   OL1     |   OL2    | ITRIP1  |   ITRIP  |   OCP_H1 |  OCP_L1  | OCP_H2 | OCP_L2 |
+#define DRV8873_REG_IC1_CONTROL  0x02  // (RW) |          TOFF        | SPI_IN  |           SR                   |       MODE      |
+#define DRV8873_REG_IC2_CONTROL  0x03  // (RW) | ITRIP_REP | TSD_MODE | OTW_REP | DIS_CPUV |      OCP_TRETRY     |     OCP_MODE    |
+#define DRV8873_REG_IC3_CONTROL  0x04  // (RW) |  CLR_FLT  |             LOCK              | OUT2_DIS | OUT2_DIS | EN_IN1 | PH_IN2 |
+#define DRV8873_REG_IC4_CONTROL  0x05  // (RW) |   RSVD    |  EN_OLP  | OLP_DLY |  EN_OLA  |      ITRIP_LVL      |    DIS_ITRIP    |
 
 #define DRV8873_FAULT_MASK 0x40
 #define DRV8873_FAULT_POS  6
@@ -140,15 +140,8 @@ public:
     void set_current_raw_meas_dma(uint32_t *dma);
     float get_current();
 
-    void set_pwm_enabled(bool enabled);
+    void set_pwm_enabled(bool enable);
     void set_pwm(float value);
-
-    enum motor_direction {
-        DIRECTION_FORWARD,
-        DIRECTION_REVERSE,
-    };
-
-    void set_direction(motor_direction dir);
 
     void set_disabled(bool disable);
     void set_sleep(bool sleep);
@@ -184,8 +177,6 @@ private:
     uint32_t *current_raw_dma;
 
     uint8_t status_reg;
-
-    motor_direction direction;
 
     uint8_t run_spi_transaction(bool read, uint8_t reg_addr, uint8_t data);
 };

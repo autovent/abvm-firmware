@@ -17,6 +17,7 @@ DRV8873::DRV8873(
     uint16_t cs_pin
 ) :
     sleep_port(sleep_port),
+    sleep_pin(sleep_pin),
     disable_port(disable_port),
     disable_pin(disable_pin),
     fault_port(fault_port),
@@ -30,7 +31,21 @@ DRV8873::DRV8873(
 {}
 
 void DRV8873::init() {
-    HAL_GPIO_WritePin(cs_port, cs_pin, GPIO_PIN_SET);
+    GPIO_InitTypeDef init;
+
+    init.Pin = disable_pin;
+    init.Mode = GPIO_MODE_OUTPUT_PP;
+    init.Pull = GPIO_PULLUP;
+    init.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(disable_port, &init);
+
+    init.Pin = sleep_pin;
+    init.Mode = GPIO_MODE_OUTPUT_PP;
+    init.Pull = GPIO_PULLUP;
+    init.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(sleep_port, &init);
+
+    // HAL_GPIO_WritePin(cs_port, cs_pin, GPIO_PIN_SET);
 }
 
 void DRV8873::set_current_raw_meas_dma(uint32_t *dma) {
@@ -54,23 +69,18 @@ void DRV8873::set_pwm_enabled(bool enable) {
 }
 
 void DRV8873::set_pwm(float value) {
-    assert(value >= 0 && value <= 1);
+    assert(value >= -1 && value <= 1);
 
     uint32_t max = htim->Init.Period;
     uint32_t pwm = max * value;
 
-    if (direction == DIRECTION_FORWARD) {
+    if (value > 0) {
         __HAL_TIM_SET_COMPARE(htim, tim_channel_pwm1, pwm);
         __HAL_TIM_SET_COMPARE(htim, tim_channel_pwm2, max);
     } else {
         __HAL_TIM_SET_COMPARE(htim, tim_channel_pwm2, pwm);
         __HAL_TIM_SET_COMPARE(htim, tim_channel_pwm1, max);
     }
-}
-
-void DRV8873::set_direction(motor_direction dir) {
-    if (dir == DIRECTION_FORWARD) direction = DIRECTION_FORWARD;
-    else if (dir == DIRECTION_REVERSE) direction = DIRECTION_REVERSE;
 }
 
 void DRV8873::set_disabled(bool disable) {

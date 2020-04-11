@@ -93,7 +93,7 @@ void control_panel_self_test() {
     controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_RIGHT, ControlPanel::LEVEL_6);
 
     controls.set_buzzer_tone(ControlPanel::BUZZER_C7);
-    controls.set_buzzer_volume(1);
+    controls.set_buzzer_volume(0.01);
     controls.sound_buzzer(true);
     HAL_Delay(100);
     controls.set_buzzer_tone(ControlPanel::BUZZER_G7);
@@ -118,35 +118,51 @@ void abvm_init() {
     usb_comm.setAsCDCConsumer();
     usb_comm.sendf("AutoVENT ABVM (autovent.org)");
 
-    load_cell.init();
+    // load_cell.init();
     
     control_panel_self_test();
 
     motor_driver.init();
-    motor_driver.set_direction(DRV8873::DIRECTION_FORWARD);
-    motor_driver.set_pwm(0.2);
+    motor_driver.set_pwm_enabled(true);
     motor_driver.set_sleep(false);
     motor_driver.set_disabled(false);
-    motor_driver.set_pwm_enabled(true);
 
-    load_cell.set_powerdown(true);
-    HAL_Delay(10);
-    load_cell.set_powerdown(false);
+    // load_cell.set_powerdown(false);
 }
 
 uint32_t last = 0;
 uint32_t interval = 1000;
 
+uint32_t stop_pressed = 0;
+uint32_t start_pressed = 0;
+uint32_t debounce_intvl = 10;
+
 extern "C"
 void abvm_update() {
-    pressure_sensor.update();
-    load_cell.update();
-    // controls.update();
+    // pressure_sensor.update();
+    // load_cell.update();
+    controls.update();
 
-    volatile float x = load_cell.read();
+    // volatile float x = load_cell.read();
 
-    // if (HAL_GetTick() > last + interval) {
-    //     volatile uint8_t reg = motor_driver.get_reg(DRV8873_FAULT_STATUS);
-    //     last = HAL_GetTick();
-    // }
+
+    if (HAL_GetTick() > last + interval) {
+        volatile uint8_t reg1, reg2, reg3, reg4, reg5, reg6;
+        reg1 = motor_driver.get_reg(DRV8873_REG_FAULT_STATUS);
+        reg2 = motor_driver.get_reg(DRV8873_REG_DIAG_STATUS);
+        reg3 = motor_driver.get_reg(DRV8873_REG_IC1_CONTROL);
+        reg4 = motor_driver.get_reg(DRV8873_REG_IC2_CONTROL);
+        reg5 = motor_driver.get_reg(DRV8873_REG_IC3_CONTROL);
+        reg6 = motor_driver.get_reg(DRV8873_REG_IC4_CONTROL);
+        last = HAL_GetTick();
+
+        usb_comm.sendf("Encoder ticks in last %.1fs: %d", float(HAL_GetTick() - last)/1000.0f, encoder.get());
+        encoder.reset();
+    }
+
+    if (controls.button_pressed(ControlPanel::START_MODE_BTN)) {
+        motor_driver.set_pwm(0.2);
+    } else {
+        motor_driver.set_pwm(-0.2);
+    }
 }

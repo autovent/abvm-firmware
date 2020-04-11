@@ -47,6 +47,8 @@ private:
 
     bool is_ready();
 
+    void enable_spi(bool spi_on);
+
     // See datasheet page 12
     static constexpr float convert_to_volts(uint32_t x, float gain, float vref);
 };
