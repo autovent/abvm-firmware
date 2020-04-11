@@ -116,7 +116,7 @@ extern "C"
 void abvm_init() {
     encoder.reset();
     usb_comm.setAsCDCConsumer();
-    usb_comm.sendf("AutoVENT ABVM (autovent.org)");
+    usb_comm.sendf("AutoVENT ABVM (autovent.org)\n");
 
     // load_cell.init();
     
@@ -126,6 +126,8 @@ void abvm_init() {
     motor_driver.set_pwm_enabled(true);
     motor_driver.set_sleep(false);
     motor_driver.set_disabled(false);
+
+    encoder.init();
 
     // load_cell.set_powerdown(false);
 }
@@ -156,7 +158,8 @@ void abvm_update() {
         reg6 = motor_driver.get_reg(DRV8873_REG_IC4_CONTROL);
         last = HAL_GetTick();
 
-        usb_comm.sendf("Encoder ticks in last %.1fs: %d", float(HAL_GetTick() - last)/1000.0f, encoder.get());
+        int16_t counts = encoder.get();
+        usb_comm.sendf("Encoder counts in last %.1fs: %d", float(HAL_GetTick() - last)/1000.0f, counts);
         encoder.reset();
     }
 
