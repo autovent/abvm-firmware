@@ -49,7 +49,7 @@ constexpr uint32_t kCurrentUpdatePeriod_ms = 2;
 constexpr uint32_t kPositionUpdate_ms =
     10;  // Match the 50 freq of the servo motors
 constexpr uint32_t kMeasurementUpdatePeriod_ms =
-    10; 
+    100; 
 
 // Configuration parameters
 // ! EDIT theses as needed
@@ -82,7 +82,7 @@ constexpr float kMinClosedPosition_deg =
     40;  // Change this to a value where the servo has displaced the appropriate
          // amount.
 constexpr float kMaxClosedPosition_deg =
-    94;  // Change this to a value where the servo has displaced the appropriate
+    90;  // Change this to a value where the servo has displaced the appropriate
          // amount.
 
 #endif

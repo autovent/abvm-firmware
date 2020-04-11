@@ -15,7 +15,7 @@
 
 #define MOTOR_GOBILDA_30RPM
 #define CONFIG_LONG_SPIRIT_FINGERS
-#define CONFIG_USE_FLOW_METER
+// #define CONFIG_USE_FLOW_METER
 #include "config.h"
 
 enum class BreathState {
@@ -111,8 +111,10 @@ float update_position_trap() {
         case BreathState::EXPIRATION:
           breath_state = BreathState::INSPIRATION;
 
-          planner.set_next({kOpenPosition_deg, (kIERatio.getExpirationPercent() *
-                                                   breath_length_ms) - kPlateauTime_ms});
+          planner.set_next(
+              {kOpenPosition_deg,
+               (kIERatio.getExpirationPercent() * breath_length_ms) -
+                   kPlateauTime_ms});
           break;
 
         default:
@@ -123,7 +125,7 @@ float update_position_trap() {
 
   digitalWrite(breathstate_out_pin, breath_state == BreathState::INSPIRATION);
   digitalWrite(plateau_out_pin, breath_state == BreathState::PLATEAU);
-  
+
   m_pos_degrees = planner.run(m_pos_degrees);
   return m_pos_degrees;
 }
@@ -144,8 +146,7 @@ void loop() {
     motor.update();
     last_time_current_ms = now;
     analogWrite(pos_out_pwm_pin,
-            (motor.maxPwmValue() + 1) * motor.position / (PI / 2));
-
+                (motor.maxPwmValue() + 1) * motor.position / (PI / 2));
   }
 
   if (abs(now - last_time_meas_ms) >= kMeasurementUpdatePeriod_ms) {
@@ -155,17 +156,17 @@ void loop() {
         load_kg = (load_cell.read() * 10 / .0033) -
                   1;  // 10kg fullscale at 3.3mV with a .611 kg offset
 
-        load_cell.measure();
+        pressure.measure();
       }
     }
 
-    // if (pressure.is_measuring) {
-    //   if (pressure.update()) {
-    //     // 14.85mV/psi
-    //     pressure_cmH2O = (0.24 + pressure.read() / .01485)
-    //     * 70.306957829636; load_cell.measure();
-    //   }
-    // }
+    if (pressure.is_measuring) {
+      if (pressure.update()) {
+        // 14.85mV/psi
+        pressure_cmH2O = (pressure.read() / .01485) * -70.306957829636 -12;
+        load_cell.measure();
+      }
+    }
 
 #ifdef CONFIG_USE_FLOW_METER
     flow_meter.recv();
