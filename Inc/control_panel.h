@@ -87,10 +87,14 @@ public:
         BUZZER_C8,  // 4186Hz (~85dB) (default)
     };
 
+    struct BarState {
+        int level;
+        int current;
+    };
     bool button_pressed(panel_button btn);
 
     void set_status_led(status_led led, bool val);
-    void set_led_bar_graph(bar_graph bar, bar_graph_level level);
+    void set_led_bar_graph(bar_graph bar, uint8_t level);
 
     void set_buzzer_tone(buzzer_tone tone);
     void set_buzzer_volume(float volume);  // volume between 0 and 1
@@ -148,8 +152,8 @@ private:
     bar_graph_level bar_left_level;
     bar_graph_level bar_right_level;
 
-    int bar_left_current_level;
-    int bar_right_current_level;
+    BarState left_bar;
+    BarState right_bar;
 
     void charlieplex(
         GPIO_TypeDef *port1,

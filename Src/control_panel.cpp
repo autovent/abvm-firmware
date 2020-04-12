@@ -1,4 +1,5 @@
 #include "control_panel.h"
+#include <assert.h>
 
 ControlPanel::ControlPanel(
     // BUTTONS
@@ -146,17 +147,13 @@ void ControlPanel::set_status_led(status_led led, bool val) {
     HAL_GPIO_WritePin(port, pin, state);
 }
 
-void ControlPanel::set_led_bar_graph(bar_graph bar, bar_graph_level level) {
-    switch (bar) {
-        case BAR_GRAPH_LEFT:
-            bar_right_level = level;
-            bar_right_current_level = LEVEL_1;
-            break;
-        case BAR_GRAPH_RIGHT:
-            bar_left_level = level;
-            bar_left_current_level = LEVEL_1;
-            break;
-        default: return;
+void ControlPanel::set_led_bar_graph(bar_graph bar, uint8_t level) {
+    assert(bar == BAR_GRAPH_RIGHT || bar == BAR_GRAPH_LEFT);
+    BarState &bs = (bar == BAR_GRAPH_RIGHT) ? right_bar : left_bar;
+
+    if (level != bs.level) {
+        bs.level = level;
+        bs.current = 1;
     }
 }
 
@@ -218,7 +215,7 @@ void ControlPanel::update() {
             led_bar_left_char2_pin,
             led_bar_left_char3_port,
             led_bar_left_char3_pin,
-            bar_left_current_level++
+            left_bar.current++
         );
         charlieplex(
             led_bar_right_char1_port,
@@ -227,15 +224,15 @@ void ControlPanel::update() {
             led_bar_right_char2_pin,
             led_bar_right_char3_port,
             led_bar_right_char3_pin,
-            bar_right_current_level++
+            right_bar.current++
         );
 
-        if (bar_left_current_level > bar_left_level) {
-            bar_left_current_level = bar_left_level > 0 ? 1 : 0;
+        if (left_bar.current > left_bar.level) {
+            left_bar.current = left_bar.level > 0 ? 1 : 0;
         }
 
-        if (bar_right_current_level > bar_right_level) {
-            bar_right_current_level = bar_right_level > 0 ? 1 : 0;
+        if (right_bar.current > right_bar.level) {
+            right_bar.current = right_bar.level > 0 ? 1 : 0;
         }
     }
 }
