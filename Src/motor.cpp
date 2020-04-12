@@ -18,6 +18,7 @@ Motor::Motor(uint32_t update_period_ms, DRV8873 *driver, Encoder *encoder,
       vel_limits(vel_limits) {}
 
 void Motor::set_pos(float pos) { target_pos = pos; }
+void Motor::set_pos_deg(float pos) { target_pos = deg_to_rad(pos); }
 
 void Motor::set_velocity(float vel) { target_velocity = vel; }
 
@@ -39,7 +40,7 @@ void Motor::reset() {
 }
 
 float Motor::to_rad_at_output(float x) {
-  return M_PI * x / (config.counts_per_rev) / config.gear_reduction;
+  return 2 * M_PI * x / (config.counts_per_rev) / config.gear_reduction;
 }
 
 bool Motor::test_no_encoder_fault(int32_t counts) {
@@ -68,7 +69,7 @@ bool Motor::test_wrong_direction() {
 }
 
 bool Motor::test_excessive_pos_error() {
-  if (is_pos_enabled && fabsf(target_pos - position) > (M_PI_2)) {
+  if (mode == Mode::POSITION && fabsf(target_pos - position) > (M_PI_2)) {
     faults.excessive_pos_error = true;
     return true;
   }
@@ -93,13 +94,13 @@ void Motor::update() {
       faults.excessive_pos_error) {
     driver->set_pwm(0);
   } else {
-    if (is_pos_enabled) {
+    if (mode == Mode::POSITION) {
       commanded_pos = pos_limits.saturate(target_pos);
 
       set_velocity(pos_pid.update(commanded_pos, position));
     }
-
-    if (is_vel_enabled) {
+    
+    if (mode == Mode::VELOCITY || mode == Mode::POSITION) {
       commanded_velocity =
           dt_rate_limit(target_velocity, commanded_velocity, .05);
       commanded_velocity = vel_limits.saturate(commanded_velocity);
