@@ -5,6 +5,8 @@
 #include "math/constants.h"
 #include "math/conversions.h"
 
+#define MOTOR_GOBILDA_30RPM
+#define CONFIG_LONG_SPIRIT_FINGERS
 
 enum class Modes {
   CALIBRATION,
@@ -75,7 +77,7 @@ constexpr float kMinClosedPosition_deg =
 constexpr float kMaxClosedPosition_deg =
     88;  // Change this to a value where the servo has displaced the appropriate
          // amount.
-#else defined(CONFIG_LONG_SPIRIT_FINGERS)
+#elif defined(CONFIG_LONG_SPIRIT_FINGERS)
 constexpr float kIdlePositiong_deg = 10;
 
 constexpr float kOpenPosition_deg =
