@@ -5,7 +5,7 @@
 #include "controls/trapezoidal_planner.h"
 #include "drv8873.h"
 #include "encoder.h"
-#include "eeprom.h"
+#include "lc064.h"
 #include "record_store.h"
 #include "main.h"
 #include "motor.h"
