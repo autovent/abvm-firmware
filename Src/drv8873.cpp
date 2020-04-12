@@ -1,6 +1,6 @@
 #include "drv8873.h"
 #include <assert.h>
-#include "dsp_math.h"
+#include "math/dsp.h"
 #include <math.h>
 
 DRV8873::DRV8873(GPIO_TypeDef *sleep_port,
@@ -71,7 +71,7 @@ void DRV8873::set_pwm_enabled(bool enable) {
 }
 
 void DRV8873::set_pwm(float value) {
-    assert(value >= -1 && value <= 1);
+    // assert(value >= -1 && value <= 1);
     value = saturate(value, -1, 1);
     uint32_t max = htim->Init.Period;
     uint32_t pwm = max * (1 - fabsf(value));
