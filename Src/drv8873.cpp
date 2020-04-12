@@ -1,9 +1,9 @@
 #include "drv8873.h"
 #include <assert.h>
+#include "dsp_math.h"
+#include <math.h>
 
-
-DRV8873::DRV8873(
-    GPIO_TypeDef *sleep_port,
+DRV8873::DRV8873(GPIO_TypeDef *sleep_port,
     uint16_t sleep_pin,  
     GPIO_TypeDef *disable_port,
     uint16_t disable_pin,
@@ -14,21 +14,23 @@ DRV8873::DRV8873(
     uint32_t tim_channel_pwm2,
     SPI_HandleTypeDef *hspi,
     GPIO_TypeDef *cs_port,
-    uint16_t cs_pin
-) :
-    sleep_port(sleep_port),
-    sleep_pin(sleep_pin),
-    disable_port(disable_port),
-    disable_pin(disable_pin),
-    fault_port(fault_port),
-    fault_pin(fault_pin),
-    htim(htim),
-    tim_channel_pwm1(tim_channel_pwm1),
-    tim_channel_pwm2(tim_channel_pwm2),
-    hspi(hspi),
-    cs_port(cs_port),
-    cs_pin(cs_pin)
-{}
+                 uint16_t cs_pin,
+                 bool is_inverted)
+    : sleep_port(sleep_port)
+    , sleep_pin(sleep_pin)
+    , disable_port(disable_port)
+    , disable_pin(disable_pin)
+    , fault_port(fault_port)
+    , fault_pin(fault_pin)
+    , htim(htim)
+    , tim_channel_pwm1(tim_channel_pwm1)
+    , tim_channel_pwm2(tim_channel_pwm2)
+    , hspi(hspi)
+    , cs_port(cs_port)
+    , cs_pin(cs_pin)
+    , is_inverted(is_inverted)
+{
+}
 
 void DRV8873::init() {
     GPIO_InitTypeDef init;
@@ -45,7 +47,7 @@ void DRV8873::init() {
     init.Speed = GPIO_SPEED_FREQ_LOW;
     HAL_GPIO_Init(sleep_port, &init);
 
-    // HAL_GPIO_WritePin(cs_port, cs_pin, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(cs_port, cs_pin, GPIO_PIN_SET);
 }
 
 void DRV8873::set_current_raw_meas_dma(uint32_t *dma) {
@@ -70,17 +72,13 @@ void DRV8873::set_pwm_enabled(bool enable) {
 
 void DRV8873::set_pwm(float value) {
     assert(value >= -1 && value <= 1);
-
+    value = saturate(value, -1, 1);
     uint32_t max = htim->Init.Period;
-    uint32_t pwm = max * value;
+    uint32_t pwm = max * (1 - fabsf(value));
 
-    if (value > 0) {
-        __HAL_TIM_SET_COMPARE(htim, tim_channel_pwm1, pwm);
-        __HAL_TIM_SET_COMPARE(htim, tim_channel_pwm2, max);
-    } else {
-        __HAL_TIM_SET_COMPARE(htim, tim_channel_pwm2, pwm);
-        __HAL_TIM_SET_COMPARE(htim, tim_channel_pwm1, max);
-    }
+    bool dir = (value < 0) ^ is_inverted;
+    __HAL_TIM_SET_COMPARE(htim, tim_channel_pwm1, dir ? pwm : max);
+    __HAL_TIM_SET_COMPARE(htim, tim_channel_pwm2, dir ? max : pwm);
 }
 
 void DRV8873::set_disabled(bool disable) {
@@ -115,12 +113,14 @@ uint8_t DRV8873::get_status_reg() {
     return status_reg;
 }
 
-uint8_t DRV8873::run_spi_transaction(bool read, uint8_t reg_addr, uint8_t data) {
+uint8_t DRV8873::run_spi_transaction(bool read, uint8_t reg_addr, uint8_t data)
+{
+    // TODO(cw): This is not working yet
     uint8_t tx_data[2] = {((read & 0x1) << 6) | ((reg_addr & 0x1F) << 1), data};
     uint8_t rx_data[2] = {0};
-    //HAL_GPIO_WritePin(cs_port, cs_pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(cs_port, cs_pin, GPIO_PIN_RESET);
     HAL_SPI_TransmitReceive(hspi, tx_data, rx_data, sizeof(tx_data), 100);
-    //HAL_GPIO_WritePin(cs_port, cs_pin, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(cs_port, cs_pin, GPIO_PIN_SET);
     status_reg = rx_data[0];
     return rx_data[1];
 }

@@ -28,8 +28,7 @@ ADS1231 load_cell(
     ADC_SPI_SCK_Pin
 );
 
-DRV8873 motor_driver(
-    MC_SLEEP_GPIO_Port,
+DRV8873 motor_driver(MC_SLEEP_GPIO_Port,
     MC_SLEEP_Pin,
     MC_DISABLE_GPIO_Port,
     MC_DISABLE_Pin,
@@ -40,8 +39,7 @@ DRV8873 motor_driver(
     TIM_CHANNEL_3,
     &hspi2,
     MC_SPI_CS_GPIO_Port,
-    MC_SPI_CS_Pin
-);
+                     MC_SPI_CS_Pin);
 
 Encoder encoder(&htim4);
 
@@ -147,7 +145,8 @@ void abvm_update() {
 
     // volatile float x = load_cell.read();
 
-
+    static float speed = 0;
+    static float dir = 1;
     if (HAL_GetTick() > last + interval) {
         volatile uint8_t reg1, reg2, reg3, reg4, reg5, reg6;
         reg1 = motor_driver.get_reg(DRV8873_REG_FAULT_STATUS);
@@ -159,13 +158,19 @@ void abvm_update() {
         last = HAL_GetTick();
 
         int16_t counts = encoder.get();
-        usb_comm.sendf("Encoder counts in last %.1fs: %d", float(HAL_GetTick() - last)/1000.0f, counts);
+        usb_comm.sendf("Encoder counts in last %.1fs: %d", float(HAL_GetTick() - last) / 1000.0f, counts);
         encoder.reset();
+        speed += dir * .1;
+        if (speed >= .8) {
+            dir = -1;
+        } else if (speed <= -.8) {
+            dir = 1;
+        }
     }
 
     if (controls.button_pressed(ControlPanel::START_MODE_BTN)) {
         motor_driver.set_pwm(0.2);
     } else {
-        motor_driver.set_pwm(-0.2);
+        motor_driver.set_pwm(speed);
     }
 }
