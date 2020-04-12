@@ -16,7 +16,7 @@ public:
      * Read the pressure transducer
      */
     bool request();
-    void measure();
+    bool measure();
 
     void update();
 

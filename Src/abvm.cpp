@@ -168,7 +168,7 @@ void abvm_update() {
 
         ext_pressure_sensor.update();
         usb_comm.sendf("Pressure %f", ext_pressure_sensor.get_pressure());
-
+        
     }
 
     if (controls.button_pressed(ControlPanel::START_MODE_BTN)) {

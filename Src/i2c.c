@@ -65,13 +65,10 @@ void MX_I2C2_Init(void)
   {
     Error_Handler();
   }
-
-  // HAL_I2C_ClearBusyFlagErrata_2_14_7(&hi2c2);
 }
 
 void HAL_I2C_MspInit(I2C_HandleTypeDef* i2cHandle)
 {
-
   GPIO_InitTypeDef GPIO_InitStruct = {0};
   if(i2cHandle->Instance==I2C1)
   {
@@ -109,7 +106,7 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* i2cHandle)
     PB11     ------> I2C2_SDA 
     */
     GPIO_InitStruct.Pin = GPIO_PIN_10;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
@@ -191,7 +188,7 @@ GPIOx_ODR).
 14. Clear SWRST bit in I2Cx_CR1 register.
 15. Enable the I2C peripheral by setting the PE bit in I2Cx_CR1 register.
 **/
-void HAL_I2C_ClearBusyFlagErrata_2_14_7(I2C_HandleTypeDef *hi2c) {
+void HAL_I2C_ClearBusyFlagErrata_2_14_7(I2C_HandleTypeDef* hi2c) {
 
     static uint8_t resetTried = 0;
     if (resetTried == 1) {
