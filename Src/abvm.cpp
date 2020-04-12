@@ -2,6 +2,7 @@
 
 #include "ads1231.h"
 #include "control_panel.h"
+#include "controls/trapezoidal_planner.h"
 #include "drv8873.h"
 #include "encoder.h"
 #include "main.h"
@@ -72,6 +73,8 @@ void control_panel_self_test() {
   controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_RIGHT, ControlPanel::OFF);
 }
 
+TrapezoidalPlanner motion({.333, .333});
+
 Motor motor(2, &motor_driver, &encoder, kMotorParams, kMotorVelPidParams,
             kMotorVelLimits, kMotorPosPidParams, kMotorPosLimits);
 extern "C" void abvm_init() {
@@ -90,11 +93,14 @@ extern "C" void abvm_init() {
 
   encoder.init();
 
-    motor.init();
+  motor.init();
+        motion.set_next({90, 4000.0f});
   // load_cell.set_powerdown(false);
 }
 
 uint32_t last = 0;
+uint32_t last_motor = 0;
+uint32_t last_motion= 0;
 uint32_t interval = 1000;
 uint32_t motor_interval = 2;
 
@@ -111,8 +117,13 @@ extern "C" void abvm_update() {
 
   static float speed = 0;
   static float dir = 1;
-  if (HAL_GetTick() > last + motor_interval) {
-      motor.update();
+  if (HAL_GetTick() > last_motor + motor_interval) {
+    motor.update();
+    last_motor = HAL_GetTick();
+  }
+  if (HAL_GetTick() > last_motion + 10) {
+    motor.set_pos(deg_to_rad(motion.run(motion.p_last)));
+    last_motion = HAL_GetTick();
   }
 
   if (HAL_GetTick() > last + interval) {
@@ -135,8 +146,10 @@ extern "C" void abvm_update() {
     // } else if (speed <= -.8) {
     //   dir = 1;
     // }
-    motor.is_pos_enabled = true;
-    motor.set_pos(M_PI/4);
+
+    // motor.set_pos(M_PI / 4);
+    //   motion.set_next({M_PI, 4000});
+
   }
 
   if (controls.button_pressed(ControlPanel::START_MODE_BTN)) {
