@@ -2,10 +2,13 @@
 #include "drv8873.h"
 #include "ads1231.h"
 #include "encoder.h"
+#include "lc064.h"
+#include "record_store.h"
 #include "usb_comm.h"
 #include "control_panel.h"
 #include "main.h"
 #include "spi.h"
+#include "i2c.h"
 #include "tim.h"
 
 ADS1231 pressure_sensor(
@@ -84,6 +87,10 @@ ControlPanel controls(
     TIM_CHANNEL_1
 );
 
+LC064 eeprom(&hi2c1, 0);
+
+RecordStore record_store(&eeprom);
+
 void control_panel_self_test() {
     controls.set_status_led(ControlPanel::STATUS_LED_1, true);
     controls.set_status_led(ControlPanel::STATUS_LED_2, true);
@@ -123,21 +130,29 @@ void abvm_init() {
     control_panel_self_test();
 
     motor_driver.init();
-    motor_driver.set_pwm_enabled(true);
-    motor_driver.set_sleep(false);
-    motor_driver.set_disabled(false);
+    motor_driver.set_pwm_enabled(false);
+    motor_driver.set_sleep(true);
+    motor_driver.set_disabled(true);
 
     encoder.init();
 
+    eeprom.init();
+    volatile bool success = false;
+    success = record_store.init();
+    uint32_t test_data = 1;
+    success = record_store.add_entry("test_entry", &test_data, sizeof(test_data), sizeof(test_data));
+    success = record_store.first_load();
+
+    success = record_store.load("test_entry", false);
+    test_data++;
+    success = record_store.store("test_entry");
+
     // load_cell.set_powerdown(false);
+
 }
 
 uint32_t last = 0;
 uint32_t interval = 1000;
-
-uint32_t stop_pressed = 0;
-uint32_t start_pressed = 0;
-uint32_t debounce_intvl = 10;
 
 extern "C"
 void abvm_update() {
@@ -145,27 +160,7 @@ void abvm_update() {
     // load_cell.update();
     controls.update();
 
-    // volatile float x = load_cell.read();
-
-
     if (HAL_GetTick() > last + interval) {
-        volatile uint8_t reg1, reg2, reg3, reg4, reg5, reg6;
-        reg1 = motor_driver.get_reg(DRV8873_REG_FAULT_STATUS);
-        reg2 = motor_driver.get_reg(DRV8873_REG_DIAG_STATUS);
-        reg3 = motor_driver.get_reg(DRV8873_REG_IC1_CONTROL);
-        reg4 = motor_driver.get_reg(DRV8873_REG_IC2_CONTROL);
-        reg5 = motor_driver.get_reg(DRV8873_REG_IC3_CONTROL);
-        reg6 = motor_driver.get_reg(DRV8873_REG_IC4_CONTROL);
         last = HAL_GetTick();
-
-        int16_t counts = encoder.get();
-        usb_comm.sendf("Encoder counts in last %.1fs: %d", float(HAL_GetTick() - last)/1000.0f, counts);
-        encoder.reset();
-    }
-
-    if (controls.button_pressed(ControlPanel::START_MODE_BTN)) {
-        motor_driver.set_pwm(0.2);
-    } else {
-        motor_driver.set_pwm(-0.2);
     }
 }

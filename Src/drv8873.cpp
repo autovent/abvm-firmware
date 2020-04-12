@@ -1,6 +1,6 @@
 #include "drv8873.h"
 #include <assert.h>
-
+#include <math.h>
 
 DRV8873::DRV8873(
     GPIO_TypeDef *sleep_port,
@@ -72,14 +72,18 @@ void DRV8873::set_pwm(float value) {
     assert(value >= -1 && value <= 1);
 
     uint32_t max = htim->Init.Period;
-    uint32_t pwm = max * value;
+    uint32_t pwm = max - (max * fabsf(value));
 
     if (value > 0) {
-        __HAL_TIM_SET_COMPARE(htim, tim_channel_pwm1, pwm);
-        __HAL_TIM_SET_COMPARE(htim, tim_channel_pwm2, max);
-    } else {
-        __HAL_TIM_SET_COMPARE(htim, tim_channel_pwm2, pwm);
+        // forward drive
+        if (pwm == __HAL_TIM_GET_COMPARE(htim, tim_channel_pwm2)) return;
         __HAL_TIM_SET_COMPARE(htim, tim_channel_pwm1, max);
+        __HAL_TIM_SET_COMPARE(htim, tim_channel_pwm2, pwm);
+    } else {
+        // reverse drive
+        if (pwm == __HAL_TIM_GET_COMPARE(htim, tim_channel_pwm1)) return;
+        __HAL_TIM_SET_COMPARE(htim, tim_channel_pwm2, max);
+        __HAL_TIM_SET_COMPARE(htim, tim_channel_pwm1, pwm);
     }
 }
 
