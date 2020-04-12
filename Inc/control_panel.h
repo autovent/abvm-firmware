@@ -56,6 +56,8 @@ public:
         DN_LEFT_BTN,
         UP_RIGHT_BTN,
         DN_RIGHT_BTN,
+        // Add new buttons here
+        NUM_PANEL_BUTTONS // ! Keep this at the end
     };
 
     enum status_led {
@@ -91,7 +93,9 @@ public:
         int level;
         int current;
     };
+
     bool button_pressed(panel_button btn);
+    bool button_pressed_singleshot(panel_button btn);
 
     void set_status_led(status_led led, bool val);
     void set_led_bar_graph(bar_graph bar, uint8_t level);
@@ -149,8 +153,8 @@ private:
     TIM_HandleTypeDef *buzzer_timer;
     uint32_t buzzer_timer_channel;
 
-    bar_graph_level bar_left_level;
-    bar_graph_level bar_right_level;
+    bool prev_panel_button_state[NUM_PANEL_BUTTONS];
+    
 
     BarState left_bar;
     BarState right_bar;

@@ -95,7 +95,7 @@ bool ControlPanel::button_pressed(panel_button btn) {
             break;
         case UP_LEFT_BTN:
             port = sw_up_left_port;
-            pin = sw_up_right_pin;
+            pin = sw_up_left_pin;
             break;
         case DN_LEFT_BTN:
             port = sw_dn_left_port;
@@ -103,7 +103,7 @@ bool ControlPanel::button_pressed(panel_button btn) {
             break;
         case UP_RIGHT_BTN:
             port = sw_up_right_port;
-            pin = sw_up_left_pin;
+            pin = sw_up_right_pin;
             break;
         case DN_RIGHT_BTN:
             port = sw_dn_right_port;
@@ -116,6 +116,14 @@ bool ControlPanel::button_pressed(panel_button btn) {
     volatile GPIO_PinState state = HAL_GPIO_ReadPin(port, pin);
 
     return state == GPIO_PIN_RESET;
+}
+
+bool ControlPanel::button_pressed_singleshot(panel_button btn) {
+    bool button_state = button_pressed(btn);
+    bool ret_state = button_state && !prev_panel_button_state[btn];
+    prev_panel_button_state[btn] = button_state;
+
+    return ret_state;
 }
 
 void ControlPanel::set_status_led(status_led led, bool val) {
