@@ -1,12 +1,14 @@
 #include "abvm.h"
 #include "drv8873.h"
 #include "ads1231.h"
+#include "drivers/ms4525do.h"
 #include "encoder.h"
 #include "usb_comm.h"
 #include "control_panel.h"
 #include "main.h"
 #include "spi.h"
 #include "tim.h"
+#include "i2c.h"
 
 ADS1231 pressure_sensor(
     ADC1_PWRDN_GPIO_Port,
@@ -46,6 +48,8 @@ DRV8873 motor_driver(
 Encoder encoder(&htim4);
 
 USBComm usb_comm;
+
+MS4525DO ext_pressure_sensor(&hi2c2);
 
 ControlPanel controls(
     SW_START_GPIO_Port,
@@ -161,6 +165,10 @@ void abvm_update() {
         int16_t counts = encoder.get();
         usb_comm.sendf("Encoder counts in last %.1fs: %d", float(HAL_GetTick() - last)/1000.0f, counts);
         encoder.reset();
+
+        ext_pressure_sensor.update();
+        usb_comm.sendf("Pressure %f", ext_pressure_sensor.get_pressure());
+
     }
 
     if (controls.button_pressed(ControlPanel::START_MODE_BTN)) {
