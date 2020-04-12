@@ -120,8 +120,7 @@
 
 class DRV8873 {
 public:
-    DRV8873(
-        GPIO_TypeDef *sleep_port,
+    DRV8873(GPIO_TypeDef *sleep_port,
         uint16_t sleep_pin,  
         GPIO_TypeDef *disable_port,
         uint16_t disable_pin,
@@ -132,7 +131,8 @@ public:
         uint32_t tim_channel_pwm2,
         SPI_HandleTypeDef *hspi,
         GPIO_TypeDef *cs_port,
-        uint16_t cs_pin
+            uint16_t cs_pin,
+            bool is_inverted = false
     );
     
     void init();
@@ -178,7 +178,8 @@ private:
 
     uint8_t status_reg;
 
+    bool is_inverted;
     uint8_t run_spi_transaction(bool read, uint8_t reg_addr, uint8_t data);
 };
 
-#endif  // DRV8873_H
+#endif // DRV8873_H
