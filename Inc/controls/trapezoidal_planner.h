@@ -4,9 +4,10 @@
 #include <math.h>
 #include <stdint.h>
 
+#include "controls/motion_planner.h"
 #include "math/dsp.h"
 
-class TrapezoidalPlanner {
+class TrapezoidalPlanner : public IMotionPlanner {
 public:
   enum class State {
     IDLE,
@@ -15,36 +16,41 @@ public:
     DECELERATION,
   };
 
-  struct Plan {
-    float p_target;
-    float time_total_ms;
-  };
-
   struct Parameters {
     float t_a_percent;
     float t_d_percent;
   };
 
   TrapezoidalPlanner(Parameters params, uint32_t dt_ms = 10)
-      : state(State::IDLE), is_next_available(false), current{}, next{}, dt_ms(dt_ms), params(params) {}
+      : state(State::IDLE),
+        is_next_available(false),
+        current{},
+        next{},
+        dt_ms(dt_ms),
+        params(params) {}
 
-  void reset() {
+  virtual ~TrapezoidalPlanner() {}
+
+  virtual void reset() {
     state = State::IDLE;
     is_next_available = false;
   }
-  bool is_idle() { return state == State::IDLE; }
 
-  void set_next(Plan const& p) {
+  virtual bool is_idle() { return state == State::IDLE; }
+
+  virtual void set_next(MotionPlan const &p) {
     next = p;
     is_next_available = true;
   }
 
-  void force_next(Plan const& p) {
+  virtual void force_next(MotionPlan const &p) {
     set_next(p);
     state = State::IDLE;
   }
 
-  float run(float pos) {
+  virtual float get_pos() { return p_last; }
+
+  virtual float run(float pos, float vel = 0) {
     if (state == State::IDLE) {
       if (is_next_available) {
         current = next;
@@ -55,7 +61,7 @@ public:
           return p_last;
         }
 
-        // Discretize the time part of the spline.
+        // Discretize t he time part of the spline.
         t_counts_accel =
             (int)((params.t_a_percent * current.time_total_ms) / dt_ms);
         t_counts_decel =
@@ -139,9 +145,9 @@ public:
   State state;
   int32_t t_counts_total;
 
-  Plan current;
+  MotionPlan current;
 
-  Plan next;
+  MotionPlan next;
   bool is_next_available;
 
   int32_t t_counts_accel;
