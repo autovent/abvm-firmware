@@ -4,16 +4,18 @@
 #include "config.h"
 #include "control_panel.h"
 #include "controls/trapezoidal_planner.h"
+#include "drivers/pin.h"
 #include "drv8873.h"
 #include "encoder.h"
 #include "i2c.h"
 #include "lc064.h"
 #include "main.h"
-#include "motor.h"
+#include "servo.h"
 #include "record_store.h"
 #include "spi.h"
 #include "tim.h"
 #include "usb_comm.h"
+#include "ventilator/homing_controller.h"
 #include "ventilator/ventilator_controller.h"
 
 ADS1231 pressure_sensor(ADC1_PWRDN_GPIO_Port, ADC1_PWRDN_Pin, &hspi1,
@@ -70,6 +72,7 @@ void control_panel_self_test() {
   HAL_Delay(100);
   controls.sound_buzzer(false);
 
+
   controls.set_status_led(ControlPanel::STATUS_LED_1, false);
   controls.set_status_led(ControlPanel::STATUS_LED_2, false);
   controls.set_status_led(ControlPanel::STATUS_LED_3, false);
@@ -80,10 +83,13 @@ void control_panel_self_test() {
 
 TrapezoidalPlanner motion({.5, .5}, 10);
 
-Motor motor(2, &motor_driver, &encoder, kMotorParams, kMotorVelPidParams,
+Servo motor(1, &motor_driver, &encoder, kMotorParams, kMotorVelPidParams,
             kMotorVelLimits, kMotorPosPidParams, kMotorPosLimits);
 
 VentilatorController vent(&motion, &motor);
+Pin homing_switch{LIMIT2_GPIO_Port, LIMIT2_Pin};
+HomingController home(&motor, &homing_switch);
+
 extern "C" void abvm_init() {
   encoder.reset();
   usb_comm.setAsCDCConsumer();
@@ -103,74 +109,94 @@ extern "C" void abvm_init() {
   motor.init();
   // load_cell.set_powerdown(false);
 
+  motor_driver.set_reg(0x5, 4 << 2 | 3);
   controls.set_status_led(ControlPanel::STATUS_LED_1, true);
   controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_LEFT, 1);
   controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_RIGHT, 1);
+  home.start();
 }
 
 uint32_t last = 0;
 uint32_t last_motor = 0;
 uint32_t last_motion = 0;
 uint32_t interval = 1000;
-uint32_t motor_interval = 2;
+uint32_t motor_interval = 1;
 
 uint32_t stop_pressed = 0;
 uint32_t start_pressed = 0;
 uint32_t debounce_intvl = 10;
 
 extern "C" void abvm_update() {
-controls.update();
-
-  if (HAL_GetTick() > last_motion + 10) {
-    vent.update();
-    last_motion = HAL_GetTick();
-  }
+  controls.update();
 
   if (HAL_GetTick() > last_motor + motor_interval) {
     motor.update();
     last_motor = HAL_GetTick();
   }
 
+  if (HAL_GetTick() > last_motion + 10) {
+    if (!home.is_done()) {
+        home.update();
+        if (home.is_done()) {
+            motor.set_pos_deg(0);
+            motor_driver.set_pwm(0);
+            vent.reset();
+            vent.start();
+            vent.update();
+                        motor.update();
 
-//   if (HAL_GetTick() > last + interval) {
-//     // TODO: Configure motor
-//     volatile uint8_t reg1, reg2, reg3, reg4, reg5, reg6;
-//     reg1 = motor_driver.get_reg(DRV8873_REG_FAULT_STATUS);
-//     reg2 = motor_driver.get_reg(DRV8873_REG_DIAG_STATUS);
-//     reg3 = motor_driver.get_reg(DRV8873_REG_IC1_CONTROL);
-//     reg4 = motor_driver.get_reg(DRV8873_REG_IC2_CONTROL);
-//     reg5 = motor_driver.get_reg(DRV8873_REG_IC3_CONTROL);
-//     reg6 = motor_driver.get_reg(DRV8873_REG_IC4_CONTROL);
-//     last = HAL_GetTick();
-//   }
+        }
+    } else {
+        vent.update();
+
+    }
+    last_motion = HAL_GetTick();
+  }
+
+
+  //   if (HAL_GetTick() > last + interval) {
+  //     // TODO: Configure motor
+  //     volatile uint8_t reg1, reg2, reg3, reg4, reg5, reg6;
+  //     reg1 = motor_driver.get_reg(DRV8873_REG_FAULT_STATUS);
+  //     reg2 = motor_driver.get_reg(DRV8873_REG_DIAG_STATUS);
+  //     reg3 = motor_driver.get_reg(DRV8873_REG_IC1_CONTROL);
+  //     reg4 = motor_driver.get_reg(DRV8873_REG_IC2_CONTROL);
+  //     reg5 = motor_driver.get_reg(DRV8873_REG_IC3_CONTROL);
+  //     reg6 = motor_driver.get_reg(DRV8873_REG_IC4_CONTROL);
+  //     last = HAL_GetTick();
+  //   }
 
   if (controls.button_pressed_singleshot(ControlPanel::START_MODE_BTN)) {
     vent.is_operational = true;
     controls.set_status_led(ControlPanel::STATUS_LED_2, true);
   }
-  
+
   if (controls.button_pressed_singleshot(ControlPanel::STOP_BTN)) {
     vent.is_operational = false;
     controls.set_status_led(ControlPanel::STATUS_LED_2, false);
   }
-  
+
   if (controls.button_pressed_singleshot(ControlPanel::UP_LEFT_BTN)) {
     vent.bump_tv(1);
-    controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_LEFT, vent.get_tv_idx()+1);
-  } 
-  
+    controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_LEFT,
+                               vent.get_tv_idx() + 1);
+  }
+
   if (controls.button_pressed_singleshot(ControlPanel::DN_LEFT_BTN)) {
     vent.bump_tv(-1);
-    controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_LEFT, vent.get_tv_idx()+1);
-  } 
-  
+    controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_LEFT,
+                               vent.get_tv_idx() + 1);
+  }
+
   if (controls.button_pressed_singleshot(ControlPanel::UP_RIGHT_BTN)) {
     vent.bump_rate(1);
-    controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_RIGHT, vent.get_rate_idx()+1);
-  }  
-  
+    controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_RIGHT,
+                               vent.get_rate_idx() + 1);
+  }
+
   if (controls.button_pressed_singleshot(ControlPanel::DN_RIGHT_BTN)) {
     vent.bump_rate(-1);
-    controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_RIGHT, vent.get_rate_idx() +1);
+    controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_RIGHT,
+                               vent.get_rate_idx() + 1);
   }
 }

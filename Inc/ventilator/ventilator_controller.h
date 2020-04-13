@@ -2,9 +2,9 @@
 
 #include "config.h"
 #include "controls/motion_planner.h"
-#include "math/dsp.h"
 #include "math/conversions.h"
-#include "motor.h"
+#include "math/dsp.h"
+#include "servo.h"
 
 class VentilatorController {
 public:
@@ -18,7 +18,7 @@ public:
     NUM_STATES
   };
 
-  VentilatorController(IMotionPlanner *motion, Motor *motor)
+  VentilatorController(IMotionPlanner *motion, Servo *motor)
       : motion(motion),
         motor(motor),
         state(State::GO_TO_IDLE),
@@ -26,13 +26,18 @@ public:
         is_operational(false),
         current_rate_idx(0),
         current_tv_idx(0),
-        tidal_volume_settings{55, 62, 69, 76, 83, 90},
+        tidal_volume_settings{55, 62, 69, 76, 83, 95},
         rate_settings{8, 10, 12, 14, 16, 18} {}
 
   void start() {
-    motor->set_mode(Motor::Mode::POSITION);
+    motor->set_pos_deg(0);
+    motor->set_mode(Servo::Mode::POSITION);
+    state = State::GO_TO_IDLE;
+
+    motion->set_next({kIdlePositiong_deg, kTimeToIdle_ms});
+    motor->set_pos_deg(motion->run(motor->position));
   }
-  
+
   float update() {
     if (!is_operational && state != State::IDLE) {
       state = State::GO_TO_IDLE;
@@ -56,9 +61,10 @@ public:
           } else {
             state = State::EXPIRATION;
           }
-          motion->set_next({tidal_volume_settings[current_tv_idx], 0,
-                            kIERatio.getInspirationPercent() *
-                                bpm_to_time_ms(rate_settings[current_rate_idx])});
+          motion->set_next(
+              {tidal_volume_settings[current_tv_idx], 0,
+               kIERatio.getInspirationPercent() *
+                   bpm_to_time_ms(rate_settings[current_rate_idx])});
           break;
         case State::INSPIRATORY_HOLD:
           state = State::EXPIRATION;
@@ -110,7 +116,7 @@ public:
 
 private:
   IMotionPlanner *motion;
-  Motor *motor;
+  Servo *motor;
 
   State state;
 
