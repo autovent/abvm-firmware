@@ -2,7 +2,6 @@
 #define CONFIG_H_
 #include "servo.h"
 #include "controls/pid.h"
-#include "math/constants.h"
 #include "math/conversions.h"
 
 #define MOTOR_GOBILDA_30RPM

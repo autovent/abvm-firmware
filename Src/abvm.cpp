@@ -15,8 +15,8 @@
 #include "spi.h"
 #include "tim.h"
 #include "usb_comm.h"
-#include "ventilator/homing_controller.h"
-#include "ventilator/ventilator_controller.h"
+#include "homing_controller.h"
+#include "ventilator_controller.h"
 
 ADS1231 pressure_sensor(ADC1_PWRDN_GPIO_Port, ADC1_PWRDN_Pin, &hspi1,
                         ADC_SPI_MISO_GPIO_Port, ADC_SPI_MISO_Pin,
