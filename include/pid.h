@@ -9,54 +9,61 @@ public:
         float Kd;
     };
 
-public:
     PID(float Kp, float Ki, float Kd, float dt)
         : params{Kp, Ki, Kd}
-        , err_acc(0)
-        , period(dt)
-        , err_last(0)
-        , is_init(false)
+        , err_acc_(0)
+        , period_(dt)
+        , err_last_(0)
+        , is_init_(false)
     {
     }
 
     PID(Params params, float dt)
         : params(params)
-        , err_acc(0)
-        , period(dt)
-        , err_last(0)
-        , is_init(false)
+        , err_acc_(0)
+        , period_(dt)
+        , err_last_(0)
+        , is_init_(false)
     {
     }
 
     void reset()
     {
-        err_acc = 0;
-        err_last = 0;
-        is_init = false;
+        err_acc_ = 0;
+        err_last_ = 0;
+        is_init_ = false;
     }
 
     float update(float target, float meas)
     {
+        // Calculate the error
         float err = target - meas;
-        if (!is_init) {
-            err_last = err;
-            err_acc = 0;
-            is_init = true;
+
+        // If we are not initialized yet:
+        //   - Set the last error to the current error to prevent the D term from going nuts
+        //   - Set the accumulated error to 0
+        //   - Assert that we are initialized.
+        if (!is_init_) {
+            err_last_ = err;
+            err_acc_ = 0;
+            is_init_ = true;
         }
 
-        err_acc += err;
-        float derr = err - err_last;
-        err_last = err;
+        err_acc_ += err;
 
-        return params.Kp * err + params.Ki * err_acc * period + (params.Kd * (derr) / period);
+        float derr = err - err_last_;
+        err_last_ = err;
+
+        return params.Kp * err + params.Ki * err_acc_ * period_ + (params.Kd * (derr) / period_);
     }
 
     Params params;
+
 private:
-    float err_acc;
-    float period;
-    float err_last;
-    bool is_init;
+    float err_acc_;
+    float period_;
+    float err_last_;
+    bool is_init_;
 
 };
 

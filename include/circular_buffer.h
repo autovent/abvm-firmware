@@ -1,7 +1,7 @@
 #ifndef CIRCULAR_BUFFER_H_
 #define CIRCULAR_BUFFER_H_
-#include <stdint.h>
 
+#include <stdint.h>
 #include <algorithm>
 
 template <typename T, size_t S, bool IsWrapable = false>
