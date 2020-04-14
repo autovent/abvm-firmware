@@ -16,7 +16,9 @@ Servo::Servo(uint32_t update_period_ms, DRV8873 *driver, Encoder *encoder,
       pos_pid(pos_pid_params, update_period_ms / 1000.0),
       pos_limits(pos_limits),
       vel_limits(vel_limits), 
-      is_inverted(is_inverted) {
+      is_inverted(is_inverted),
+      target_pos(0),
+      target_velocity(0) {
     encoder->is_inverted = true;
     driver->is_inverted = true;
 }
