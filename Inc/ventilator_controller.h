@@ -32,8 +32,10 @@ public:
   inline void bump_rate(int i) {
     current_rate_idx = saturate(current_rate_idx + i, 0, kNumRateSettings - 1);
   }
+  inline float get_closed_pos() {return tidal_volume_settings[get_tv_idx()]; }
+  inline float get_open_pos() {return kOpenPosition_deg; }
   inline uint8_t get_rate_idx() { return current_rate_idx; }
-
+  inline float get_rate() {return rate_settings[get_rate_idx()]; }
   bool is_operational;
 
 private:
