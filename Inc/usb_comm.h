@@ -2,35 +2,41 @@
 #define USB_COMM_H
 
 #include "circular_buffer.h"
+#include <string.h>
 
 class USBComm {
 public:
-    USBComm();
+  USBComm();
 
-    bool send(uint8_t *data, size_t len);
+  bool send(uint8_t *data, size_t len);
 
-    bool sendf(const char *fmt, ...);
+  size_t receive_line(uint8_t *data);
 
-    size_t receiveLine(uint8_t **data);
+  bool append(uint8_t *data, size_t len);
 
-    void append(uint8_t *data, size_t len);
+  void setAsCDCConsumer();
 
-    void setAsCDCConsumer();
+template <typename... Args>
+bool sendf(const char *fmt, Args... args) {
+    static char data[256];
+    vsnprintf(data, sizeof(data), fmt, args...);
+    bool result = send((uint8_t*)data, strlen(data));
+    return result;
+}
+
 private:
-    static constexpr size_t BUFFER_SIZE = 16;
-    static constexpr size_t MAX_PACKET_SIZE = 64;
+  static constexpr size_t BUFFER_SIZE = 16;
+  static constexpr size_t MAX_PACKET_SIZE = 64;
 
-    struct usbData {
-        size_t size;
-        uint8_t data[MAX_PACKET_SIZE];
-    };
+  struct UsbData {
+    size_t size;
+    uint8_t data[MAX_PACKET_SIZE];
+  };
 
-    usbData dataBuf[BUFFER_SIZE];
+  CircularBuffer<UsbData, BUFFER_SIZE> rx_buf;
 
-    size_t idxFirst;
-    size_t idxCurrent;
-
-    static void cdcConsumer(uint8_t *data, size_t len, void *arg);
+  static void cdcConsumer(uint8_t *data, size_t len, void *arg);
+  constexpr bool is_seperator(char x) { return x == '\n' || x == '\r'; }
 };
 
 #endif  // USB_COMM_H
