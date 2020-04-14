@@ -76,7 +76,6 @@ int main(void)
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
-  
 
   /* MCU Configuration--------------------------------------------------------*/
 
@@ -105,15 +104,13 @@ int main(void)
   MX_TIM4_Init();
   MX_TIM3_Init();
   MX_USB_DEVICE_Init();
+  MX_I2C2_Init();
   /* USER CODE BEGIN 2 */
-
-  //HAL_ADC_Start_DMA(&hadc1, adc_dma_buf, sizeof(adc_dma_buf));
+  HAL_ADC_Start(&hadc1);
 
   abvm_init();
 
   /* USER CODE END 2 */
- 
- 
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */

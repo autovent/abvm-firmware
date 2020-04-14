@@ -10,8 +10,12 @@ void Encoder::init() {
 }
 
 int16_t Encoder::get() {
-    // return the counter offset from the halfway point
-    return htim->Instance->CNT - HALFWAY;
+    if (is_inverted) {
+        return  HALFWAY - htim->Instance->CNT;
+    } else {
+        // return the counter offset from the halfway point
+        return  htim->Instance->CNT - HALFWAY;
+    }
 }
 
 void Encoder::reset() {

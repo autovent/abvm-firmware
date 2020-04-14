@@ -1,13 +1,14 @@
-#include "motor.h"
+#include "servo.h"
 
-uint32_t Motor::Faults::to_int() {
+uint32_t Servo::Faults::to_int() {
   return ((no_encoder ? 1 : 0) << 0) | ((wrong_dir ? 1 : 0) << 1) |
          ((overcurrent ? 1 : 0) << 2) | ((excessive_pos_error ? 1 : 0) << 3);
 }
 
-Motor::Motor(uint32_t update_period_ms, DRV8873 *driver, Encoder *encoder,
+Servo::Servo(uint32_t update_period_ms, DRV8873 *driver, Encoder *encoder,
              Config cfg, PID::Params vel_pid_params, Range<float> vel_limits,
-             PID::Params pos_pid_params, Range<float> pos_limits)
+             PID::Params pos_pid_params, Range<float> pos_limits,
+             bool is_inverted)
     : driver(driver),
       encoder(encoder),
       config(cfg),
@@ -15,35 +16,43 @@ Motor::Motor(uint32_t update_period_ms, DRV8873 *driver, Encoder *encoder,
       vel_pid(vel_pid_params, update_period_ms / 1000.0),
       pos_pid(pos_pid_params, update_period_ms / 1000.0),
       pos_limits(pos_limits),
-      vel_limits(vel_limits) {}
+      vel_limits(vel_limits),
+      is_inverted(is_inverted),
+      target_pos(0),
+      target_velocity(0) {
+  encoder->is_inverted = true;
+  driver->is_inverted = true;
+}
 
-void Motor::set_pos(float pos) { target_pos = pos; }
+void Servo::set_pos(float pos) { target_pos = pos; }
+void Servo::set_pos_deg(float pos) { target_pos = deg_to_rad(pos); }
 
-void Motor::set_velocity(float vel) { target_velocity = vel; }
+void Servo::set_velocity(float vel) { target_velocity = vel; }
 
-void Motor::init() {
+void Servo::init() {
   encoder->reset();
   driver->set_pwm(0);
   zero();
   reset();
 }
 
-void Motor::zero() {
+void Servo::zero() {
   last_pos = 0;
   position = 0;
+  encoder->reset();
 }
 
-void Motor::reset() {
-  vel_pid.reset();
+void Servo::reset() {
+  //   vel_pid.reset();
   pos_pid.reset();
 }
 
-float Motor::to_rad_at_output(float x) {
-  return M_PI * x / (config.counts_per_rev) / config.gear_reduction;
+float Servo::to_rad_at_output(float x) {
+  return 2 * M_PI * x / (config.counts_per_rev) / config.gear_reduction;
 }
 
-bool Motor::test_no_encoder_fault(int32_t counts) {
-  if (counts == 0 && command > 500) {
+bool Servo::test_no_encoder_fault(int32_t counts) {
+  if (counts == 0 && fabsf(command) > .01) {
     if (++no_encoder_counts > 30) {
       faults.no_encoder = true;
       return true;
@@ -54,10 +63,9 @@ bool Motor::test_no_encoder_fault(int32_t counts) {
   return false;
 }
 
-bool Motor::test_wrong_direction() {
-  if (signof(velocity) != signof(target_velocity) &&
-      (fabsf(target_velocity - velocity) > 1)) {
-    if (++wrong_dir_counts > 20) {
+bool Servo::test_wrong_direction() {
+  if (signof(command) != signof(velocity)) {
+    if (++wrong_dir_counts > 30) {
       faults.wrong_dir = true;
       return true;
     }
@@ -67,15 +75,15 @@ bool Motor::test_wrong_direction() {
   return false;
 }
 
-bool Motor::test_excessive_pos_error() {
-  if (is_pos_enabled && fabsf(target_pos - position) > (M_PI_2)) {
+bool Servo::test_excessive_pos_error() {
+  if (mode == Mode::POSITION && fabsf(target_pos - position) > (M_PI_2)) {
     faults.excessive_pos_error = true;
     return true;
   }
   return false;
 }
 
-void Motor::update() {
+void Servo::update() {
   int16_t next_pos = encoder->get();
   int16_t counts = next_pos - last_pos;
 
@@ -91,21 +99,26 @@ void Motor::update() {
 
   if (faults.no_encoder || faults.wrong_dir || faults.overcurrent ||
       faults.excessive_pos_error) {
+    command = 0;
     driver->set_pwm(0);
   } else {
-    if (is_pos_enabled) {
+    if (mode == Mode::POSITION) {
       commanded_pos = pos_limits.saturate(target_pos);
 
       set_velocity(pos_pid.update(commanded_pos, position));
     }
 
-    if (is_vel_enabled) {
+    if (mode == Mode::VELOCITY || mode == Mode::POSITION) {
       commanded_velocity =
           dt_rate_limit(target_velocity, commanded_velocity, .05);
       commanded_velocity = vel_limits.saturate(commanded_velocity);
-      driver->set_pwm(vel_pid.update(commanded_velocity, velocity));
+      command = vel_pid.update(commanded_velocity, velocity);
+
+      driver->set_pwm(command);
     }
   }
 
   last_pos = next_pos;
 }
+
+void Servo::set_mode(Mode m) { mode = m; }

@@ -1,10 +1,11 @@
 #ifndef CONFIG_H_
 #define CONFIG_H_
-#include "motor.h"
+#include "servo.h"
 #include "controls/pid.h"
-#include "math/constants.h"
 #include "math/conversions.h"
 
+#define MOTOR_GOBILDA_30RPM
+#define CONFIG_LONG_SPIRIT_FINGERS
 
 enum class Modes {
   CALIBRATION,
@@ -23,22 +24,22 @@ struct IERatio {
   }
 };
 
-constexpr Motor::Config kGoBilda_YellowJacket_5202_0002_0188_30RPM = {188,
+constexpr Servo::Config kGoBilda_YellowJacket_5202_0002_0188_30RPM = {188,
                                                                         28};
 
-constexpr Motor::Config kRobotZone_638312_16RPM = {515.63, 48};
+constexpr Servo::Config kRobotZone_638312_16RPM = {515.63, 48};
 
 #if defined(MOTOR_GOBILDA_30RPM)
-constexpr Motor::Config kMotorParams =
+constexpr Servo::Config kMotorParams =
     kGoBilda_YellowJacket_5202_0002_0188_30RPM;
-constexpr PID::Params kMotorVelPidParams = {4, .0, .0};
-constexpr PID::Params kMotorPosPidParams = {14, .1, .02};  //.02};
-constexpr Range<float> kMotorVelLimits = {-20 * 0.104719755,
-                                    20 * 0.104719755};  // RPM to rads/sec
+constexpr PID::Params kMotorVelPidParams = {3, .0, .0};
+constexpr PID::Params kMotorPosPidParams = {15, .1, .0};  //.02};
+constexpr Range<float> kMotorVelLimits = {-30 * 0.104719755,
+                                    30 * 0.104719755};  // RPM to rads/sec
 constexpr Range<float> kMotorPosLimits = {0, deg_to_rad(95)};
 
 #elif defined(MOTOR_ROBOTZONE_16RPM)
-constexpr Motor::Config kMotorParams = kRobotZone_638312_16RPM;
+constexpr Servo::Config kMotorParams = kRobotZone_638312_16RPM;
 constexpr PID::Params kMotorVelPidParams = {6.5, .05, 0};
 constexpr PID::Params kMotorPosPidParams = {16, 0, 0.0};
 constexpr Range kMotorVelLimits = {-15 * 0.104719755,
@@ -75,11 +76,11 @@ constexpr float kMinClosedPosition_deg =
 constexpr float kMaxClosedPosition_deg =
     88;  // Change this to a value where the servo has displaced the appropriate
          // amount.
-#else defined(CONFIG_LONG_SPIRIT_FINGERS)
+#elif defined(CONFIG_LONG_SPIRIT_FINGERS)
 constexpr float kIdlePositiong_deg = 10;
 
 constexpr float kOpenPosition_deg =
-    35;  // Change this to a value where the servo is just barely compressing
+    25;  // Change this to a value where the servo is just barely compressing
          // the bag
 constexpr float kMinClosedPosition_deg =
     40;  // Change this to a value where the servo has displaced the appropriate

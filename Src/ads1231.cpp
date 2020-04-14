@@ -1,18 +1,18 @@
 #include "ads1231.h"
 #include "tim.h"
+#include <math.h>
 
 #define SPI_TIMEOUT 10
 
 ADS1231::ADS1231()
     : powerdown_pin(0)
     , m(1)
-    , offset(0)
     , b(0)
 {}
 
 ADS1231::ADS1231(GPIO_TypeDef *powerdown_port, uint32_t powerdown_pin, SPI_HandleTypeDef *hspi,
     GPIO_TypeDef *miso_port, uint32_t miso_pin, GPIO_TypeDef *sclk_port, uint32_t sclk_pin,
-    float m, float offset, float b) :
+    float m, float b) :
     powerdown_port(powerdown_port),
     powerdown_pin(powerdown_pin),
     miso_port(miso_port),
@@ -20,9 +20,8 @@ ADS1231::ADS1231(GPIO_TypeDef *powerdown_port, uint32_t powerdown_pin, SPI_Handl
     sclk_port(sclk_port),
     sclk_pin(sclk_pin),
     hspi(hspi),
-    vref(3.3),
+    vref(3.06),
     m(m),
-    offset(offset),
     b(b)
 {}
 
@@ -41,7 +40,7 @@ float ADS1231::read_volts() {
 }
 
 float ADS1231::read() {
-    return m * (volts + offset) + b;
+    return m * (volts) + b;
 }
 
 /**
@@ -59,8 +58,17 @@ bool ADS1231::update() {
         TIM_DelayMicros(1);
         HAL_GPIO_WritePin(sclk_port, sclk_pin, GPIO_PIN_RESET);
 
-        int32_t value = (data[0] << 16) | (data[1] << 8) | (data[2]);
+        // Two's complement of 24 bit value. Make sure the sign gets
+        // extended into the upper byte.
+        int32_t next_value = 
+                     ((data[0] << 24)
+                     | (data[1] << 16) 
+                     | (data[2] << 8)) >>8;
 
+        // TODO: Remove the rejection filter once the SPI bug is sorted out.
+        // !BUG: Currently there is a BUG where not all SPI clocks are being properly
+        //       transmitted.
+        value = rejection_filter(next_value);
         volts = convert_to_volts(value, 128, vref);
         return true;
     } else {
@@ -68,9 +76,22 @@ bool ADS1231::update() {
     }
 }
 
-void ADS1231::measure() {
-    HAL_GPIO_WritePin(powerdown_port, powerdown_pin, GPIO_PIN_SET);
-    is_measuring = true;
+int32_t ADS1231::rejection_filter(int32_t next) {
+        if (is_first) {
+            value = next;
+            is_first = false;
+        }
+
+        if (abs(next - value) > 1<<14) {
+            if (++rejects > 10) {
+                rejects = 0;
+            } else {
+                return value;
+            } 
+        } else {
+            rejects = 0;
+        }
+        return next;
 }
 
 bool ADS1231::is_ready() {
@@ -78,8 +99,8 @@ bool ADS1231::is_ready() {
 }
 
 // See datasheet page 12
-constexpr float ADS1231::convert_to_volts(uint32_t x, float gain, float vref) {
-    return ((static_cast<float>(x) / kOffsetBinaryCodeZero) - 1) * vref / gain;
+constexpr float ADS1231::convert_to_volts(int32_t x, float gain, float vref) {
+    return (static_cast<float>(x) / (1<<23)) * vref / gain;
 }
 
 void ADS1231::set_powerdown(bool pwrdn) {

@@ -3,6 +3,8 @@
 #include "math/dsp.h"
 #include <math.h>
 
+#include "adc.h"
+
 DRV8873::DRV8873(GPIO_TypeDef *sleep_port,
     uint16_t sleep_pin,  
     GPIO_TypeDef *disable_port,
@@ -55,7 +57,8 @@ void DRV8873::set_current_raw_meas_dma(uint32_t *dma) {
 }
 
 float DRV8873::get_current() {
-    float adc_voltage = (*current_raw_dma * VREF) / 4096.0f;
+    uint32_t val = HAL_ADC_GetValue(&hadc1);
+    volatile float adc_voltage = (val * VREF) / 4096.0f;
     float load_current = adc_voltage / R_LOAD;
     return load_current * I_MIRROR_RATIO;
 }

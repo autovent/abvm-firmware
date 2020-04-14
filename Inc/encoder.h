@@ -13,6 +13,7 @@ public:
     int16_t get();
     void reset();
 
+    bool is_inverted;
 private:
     TIM_HandleTypeDef *htim;
 };
