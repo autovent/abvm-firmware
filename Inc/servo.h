@@ -50,6 +50,12 @@ public:
   float velocity = 0;
   float position = 0;
   float command = 0;
+  float target_pos = 0;
+  float commanded_pos = 0;
+
+  float target_velocity = 0;
+  float commanded_velocity = 0;
+  Faults faults = {.no_encoder = false, .wrong_dir = false};
 
 private:
   uint32_t period_ms;
@@ -64,11 +70,6 @@ private:
   PID pos_pid;
   Range<float> pos_limits;
 
-  float target_pos = 0;
-  float commanded_pos = 0;
-
-  float target_velocity = 0;
-  float commanded_velocity = 0;
 
   int32_t last_pos = 0;
   uint32_t pwm_freq;
@@ -77,7 +78,6 @@ private:
   
   bool is_inverted;
   
-  Faults faults = {.no_encoder = false, .wrong_dir = false};
 
   bool test_no_encoder_fault(int32_t counts);
   bool test_wrong_direction();
