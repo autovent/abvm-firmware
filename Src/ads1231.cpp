@@ -61,10 +61,9 @@ bool ADS1231::update() {
         // Two's complement of 24 bit value. Make sure the sign gets
         // extended into the upper byte.
         int32_t next_value = 
-                     (data[0] ? 0xFF000000UL : 0) 
-                     | (data[0] << 24)
+                     ((data[0] << 24)
                      | (data[1] << 16) 
-                     | (data[2] << 8) ;
+                     | (data[2] << 8)) >>8;
 
         // TODO: Remove the rejection filter once the SPI bug is sorted out.
         // !BUG: Currently there is a BUG where not all SPI clocks are being properly
@@ -77,22 +76,22 @@ bool ADS1231::update() {
     }
 }
 
-int32_t ADS1231::rejection_filter(float next) {
+int32_t ADS1231::rejection_filter(int32_t next) {
         if (is_first) {
             value = next;
             is_first = false;
         }
 
-        if (abs(next - value) > 1<<16) {
+        if (abs(next - value) > 1<<15) {
             if (++rejects > 10) {
                 rejects = 0;
             } else {
-                return false;
+                return value;
             } 
         } else {
             rejects = 0;
         }
-        value = next;
+        return next;
 }
 
 bool ADS1231::is_ready() {
