@@ -4,22 +4,21 @@
 #include "stm32f1xx_hal.h"
 
 #define DRV8873_REG_FAULT_STATUS \
-  0x00  // (RO) |   RSVD    |   FAULT  |   OTW   |   UVLO   |   CPUV   |  OCP |
-        // TSD   |  OLD   |
+    0x00  // (RO) |   RSVD    |   FAULT  |   OTW   |   UVLO   |   CPUV   |  OCP |
+          // TSD   |  OLD   |
 #define DRV8873_REG_DIAG_STATUS \
-  0x01  // (RO) |   OL1     |   OL2    | ITRIP1  |   ITRIP  |   OCP_H1 |  OCP_L1
-        // | OCP_H2 | OCP_L2 |
-#define DRV8873_REG_IC1_CONTROL \
-  0x02  // (RW) |          TOFF        | SPI_IN  |           SR |       MODE |
+    0x01                              // (RO) |   OL1     |   OL2    | ITRIP1  |   ITRIP  |   OCP_H1 |  OCP_L1
+                                      // | OCP_H2 | OCP_L2 |
+#define DRV8873_REG_IC1_CONTROL 0x02  // (RW) |          TOFF        | SPI_IN  |           SR |       MODE |
 #define DRV8873_REG_IC2_CONTROL \
-  0x03  // (RW) | ITRIP_REP | TSD_MODE | OTW_REP | DIS_CPUV |      OCP_TRETRY |
-        // OCP_MODE    |
+    0x03  // (RW) | ITRIP_REP | TSD_MODE | OTW_REP | DIS_CPUV |      OCP_TRETRY |
+          // OCP_MODE    |
 #define DRV8873_REG_IC3_CONTROL \
-  0x04  // (RW) |  CLR_FLT  |             LOCK              | OUT2_DIS |
-        // OUT2_DIS | EN_IN1 | PH_IN2 |
+    0x04  // (RW) |  CLR_FLT  |             LOCK              | OUT2_DIS |
+          // OUT2_DIS | EN_IN1 | PH_IN2 |
 #define DRV8873_REG_IC4_CONTROL \
-  0x05  // (RW) |   RSVD    |  EN_OLP  | OLP_DLY |  EN_OLA  |      ITRIP_LVL |
-        // DIS_ITRIP    |
+    0x05  // (RW) |   RSVD    |  EN_OLP  | OLP_DLY |  EN_OLA  |      ITRIP_LVL |
+          // DIS_ITRIP    |
 
 #define DRV8873_FAULT_MASK 0x40
 #define DRV8873_FAULT_POS 6
@@ -127,64 +126,61 @@
 #define DRV8873_DIS_ITRIP_POS 0
 
 #define DRV8873_REG_GET_VAL(reg, mask, pos) ((reg) & (mask)) >> (pos)
-#define DRV8873_REG_SET_VAL(reg, mask, pos, val) \
-  (reg) |= (((val) << (pos)) & (mask))
+#define DRV8873_REG_SET_VAL(reg, mask, pos, val) (reg) |= (((val) << (pos)) & (mask))
 
 class DRV8873 {
-public:
-  DRV8873(GPIO_TypeDef *sleep_port, uint16_t sleep_pin,
-          GPIO_TypeDef *disable_port, uint16_t disable_pin,
-          GPIO_TypeDef *fault_port, uint16_t fault_pin, TIM_HandleTypeDef *htim,
-          uint32_t tim_channel_pwm1, uint32_t tim_channel_pwm2,
-          SPI_HandleTypeDef *hspi, GPIO_TypeDef *cs_port, uint16_t cs_pin,
-          bool is_inverted = false);
+  public:
+    DRV8873(GPIO_TypeDef *sleep_port, uint16_t sleep_pin, GPIO_TypeDef *disable_port, uint16_t disable_pin,
+            GPIO_TypeDef *fault_port, uint16_t fault_pin, TIM_HandleTypeDef *htim, uint32_t tim_channel_pwm1,
+            uint32_t tim_channel_pwm2, SPI_HandleTypeDef *hspi, GPIO_TypeDef *cs_port, uint16_t cs_pin,
+            bool is_inverted = false);
 
-  void init();
+    void init();
 
-  void set_current_raw_meas_dma(uint32_t *dma);
-  float get_current();
+    void set_current_raw_meas_dma(uint32_t *dma);
+    float get_current();
 
-  void set_pwm_enabled(bool enable);
-  void set_pwm(float value);
+    void set_pwm_enabled(bool enable);
+    void set_pwm(float value);
 
-  void set_disabled(bool disable);
-  void set_sleep(bool sleep);
+    void set_disabled(bool disable);
+    void set_sleep(bool sleep);
 
-  bool get_fault();
+    bool get_fault();
 
-  uint8_t get_reg(uint8_t reg_addr);
-  void set_reg(uint8_t reg_addr, uint8_t value);
-  uint8_t get_status_reg();
-  
-  bool is_inverted;
+    uint8_t get_reg(uint8_t reg_addr);
+    void set_reg(uint8_t reg_addr, uint8_t value);
+    uint8_t get_status_reg();
 
-private:
-  static constexpr float VREF = 3.3f;
-  static constexpr float I_MIRROR_RATIO = 1100.0f;
-  static constexpr float R_LOAD = 330.0f;
+    bool is_inverted;
 
-  GPIO_TypeDef *sleep_port;
-  uint16_t sleep_pin;
+  private:
+    static constexpr float VREF = 3.3f;
+    static constexpr float I_MIRROR_RATIO = 1100.0f;
+    static constexpr float R_LOAD = 330.0f;
 
-  GPIO_TypeDef *disable_port;
-  uint16_t disable_pin;
+    GPIO_TypeDef *sleep_port;
+    uint16_t sleep_pin;
 
-  GPIO_TypeDef *fault_port;
-  uint16_t fault_pin;
+    GPIO_TypeDef *disable_port;
+    uint16_t disable_pin;
 
-  TIM_HandleTypeDef *htim;
-  uint32_t tim_channel_pwm1;
-  uint32_t tim_channel_pwm2;
+    GPIO_TypeDef *fault_port;
+    uint16_t fault_pin;
 
-  SPI_HandleTypeDef *hspi;
-  GPIO_TypeDef *cs_port;
-  uint16_t cs_pin;
+    TIM_HandleTypeDef *htim;
+    uint32_t tim_channel_pwm1;
+    uint32_t tim_channel_pwm2;
 
-  uint32_t *current_raw_dma;
+    SPI_HandleTypeDef *hspi;
+    GPIO_TypeDef *cs_port;
+    uint16_t cs_pin;
 
-  uint8_t status_reg;
+    uint32_t *current_raw_dma;
 
-  uint8_t run_spi_transaction(bool read, uint8_t reg_addr, uint8_t data);
+    uint8_t status_reg;
+
+    uint8_t run_spi_transaction(bool read, uint8_t reg_addr, uint8_t data);
 };
 
 #endif  // DRV8873_H

@@ -1,16 +1,13 @@
 #include "record_store.h"
-#include "crc16.h"
+
 #include <assert.h>
 #include <string.h>
 
-RecordStore::RecordStore(EEPROM<uint16_t, uint8_t> *eeprom) :
-    eeprom(eeprom),
-    num_entries(0)
-{}
+#include "crc16.h"
 
-bool RecordStore::init() {
-    return add_entry("header", &header, sizeof(header), sizeof(header));
-}
+RecordStore::RecordStore(EEPROM<uint16_t, uint8_t> *eeprom) : eeprom(eeprom), num_entries(0) {}
+
+bool RecordStore::init() { return add_entry("header", &header, sizeof(header), sizeof(header)); }
 
 bool RecordStore::add_entry(const char *name, void *data, uint16_t size_bytes, uint16_t max_size_bytes) {
     assert(name != nullptr);
@@ -71,7 +68,7 @@ bool RecordStore::first_load() {
 
 bool RecordStore::load(const char *name, bool force_load) {
     Entry *entry = find_entry_by_name(name);
-    
+
     if (entry == nullptr) {
         return false;
     }
@@ -81,7 +78,7 @@ bool RecordStore::load(const char *name, bool force_load) {
 
 bool RecordStore::store(const char *name) {
     Entry *entry = find_entry_by_name(name);
-    
+
     if (entry == nullptr) {
         return false;
     }
@@ -105,7 +102,7 @@ bool RecordStore::load_entry(Entry *entry, bool force_load) {
     }
 
     uint16_t read_crc;
-    success = eeprom->read(entry->address + entry->size, (uint8_t*)&read_crc, CRC_SIZE_BYTES);
+    success = eeprom->read(entry->address + entry->size, (uint8_t *)&read_crc, CRC_SIZE_BYTES);
     if (!success) {
         return false;
     }
@@ -121,14 +118,14 @@ bool RecordStore::load_entry(Entry *entry, bool force_load) {
 }
 
 bool RecordStore::store_entry(Entry *entry) {
-    bool success = eeprom->write(entry->address, (uint8_t*)entry->data, entry->size);
+    bool success = eeprom->write(entry->address, (uint8_t *)entry->data, entry->size);
     if (!success) {
         return false;
     }
 
-    uint16_t crc = CRC16::calc((uint8_t*)entry->data, entry->size);
-    success = eeprom->write(entry->address + entry->size, (uint8_t*)&crc, CRC_SIZE_BYTES);
-    
+    uint16_t crc = CRC16::calc((uint8_t *)entry->data, entry->size);
+    success = eeprom->write(entry->address + entry->size, (uint8_t *)&crc, CRC_SIZE_BYTES);
+
     return success;
 }
 

@@ -3,11 +3,8 @@
 #include "stm32f1xx_hal.h"
 
 class MS4525DO {
-public:
-    enum class State {
-        IDLE,
-        MEASURING
-    };
+  public:
+    enum class State { IDLE, MEASURING };
 
     MS4525DO(I2C_HandleTypeDef *hi2c);
 
@@ -24,7 +21,7 @@ public:
 
     float get_temp();
 
-private:
+  private:
     static constexpr uint8_t kDevAddress = 0x28;
 
     I2C_HandleTypeDef *hi2c;

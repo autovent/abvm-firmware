@@ -2,10 +2,11 @@
 #define ENCODER_H
 
 #include <stdint.h>
+
 #include "stm32f1xx_hal.h"
 
 class Encoder {
-public:
+  public:
     Encoder(TIM_HandleTypeDef *tim);
 
     void init();
@@ -14,7 +15,8 @@ public:
     void reset();
 
     bool is_inverted;
-private:
+
+  private:
     TIM_HandleTypeDef *htim;
 };
 

@@ -7,11 +7,10 @@ struct MotionPlan {
 };
 
 class IMotionPlanner {
-public:
-
+  public:
     virtual void set_next(MotionPlan const &p);
     virtual void force_next(MotionPlan const &p);
-    virtual float run(float pos, float vel=0);
+    virtual float run(float pos, float vel = 0);
     virtual void reset();
     virtual bool is_idle();
 
