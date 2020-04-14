@@ -3,10 +3,10 @@
 #include "platform.h"
 
 struct Pin {
-  GPIO_TypeDef *port;
-  uint16_t pin;
+    GPIO_TypeDef *port;
+    uint16_t pin;
 
-  bool read();
+    bool read();
 
-  void write(bool val);
+    void write(bool val);
 };
