@@ -14,7 +14,7 @@ public:
   void start();
   
   bool is_done();
-  float update();
+  State update();
 
 private:
   Servo *motor;

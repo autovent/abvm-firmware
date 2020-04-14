@@ -15,7 +15,7 @@ void HomingController::start() {
 
 bool HomingController::is_done() { return state == State::DONE; }
 
-float HomingController::update() {
+HomingController::State HomingController::update() {
   if (state == State::HOMING) {
     if (!home_switch->read()) {
       state = State::DONE;
@@ -26,4 +26,6 @@ float HomingController::update() {
       motor->set_velocity(homing_velocity);
     }
   }
+  
+  return state;
 }
