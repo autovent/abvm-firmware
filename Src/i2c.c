@@ -191,9 +191,6 @@ GPIOx_ODR).
 void HAL_I2C_ClearBusyFlagErrata_2_14_7(I2C_HandleTypeDef* hi2c) {
 
     static uint8_t resetTried = 0;
-    if (resetTried == 1) {
-        return ;
-    }
     uint32_t SDA_PIN = GPIO_PIN_10;
     uint32_t SCL_PIN = GPIO_PIN_11;
     GPIO_InitTypeDef GPIO_InitStruct;
@@ -214,10 +211,8 @@ void HAL_I2C_ClearBusyFlagErrata_2_14_7(I2C_HandleTypeDef* hi2c) {
     // 3
     GPIO_PinState pinState;
     if (HAL_GPIO_ReadPin(GPIOB, SDA_PIN) == GPIO_PIN_RESET) {
-        for(;;){}
     }
     if (HAL_GPIO_ReadPin(GPIOB, SCL_PIN) == GPIO_PIN_RESET) {
-        for(;;){}
     }
 
     // 4
@@ -228,7 +223,6 @@ void HAL_I2C_ClearBusyFlagErrata_2_14_7(I2C_HandleTypeDef* hi2c) {
 
     // 5
     if (HAL_GPIO_ReadPin(GPIOB, SDA_PIN) == GPIO_PIN_SET) {
-        for(;;){}
     }
 
     // 6
@@ -239,7 +233,6 @@ void HAL_I2C_ClearBusyFlagErrata_2_14_7(I2C_HandleTypeDef* hi2c) {
 
     // 7
     if (HAL_GPIO_ReadPin(GPIOB, SCL_PIN) == GPIO_PIN_SET) {
-        for(;;){}
     }
 
     // 8
@@ -250,7 +243,6 @@ void HAL_I2C_ClearBusyFlagErrata_2_14_7(I2C_HandleTypeDef* hi2c) {
 
     // 9
     if (HAL_GPIO_ReadPin(GPIOB, SDA_PIN) == GPIO_PIN_RESET) {
-        for(;;){}
     }
 
     // 10
@@ -261,7 +253,6 @@ void HAL_I2C_ClearBusyFlagErrata_2_14_7(I2C_HandleTypeDef* hi2c) {
 
     // 11
     if (HAL_GPIO_ReadPin(GPIOB, SCL_PIN) == GPIO_PIN_RESET) {
-        for(;;){}
     }
 
     // 12
