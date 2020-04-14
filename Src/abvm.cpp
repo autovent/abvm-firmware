@@ -23,7 +23,7 @@
 
 ADS1231 load_cell(ADC2_PWRDN_GPIO_Port, ADC2_PWRDN_Pin, &hspi1,
                   ADC_SPI_MISO_GPIO_Port, ADC_SPI_MISO_Pin,
-                  ADC_SPI_SCK_GPIO_Port, ADC_SPI_SCK_Pin, 10 / .0033, 1);
+                  ADC_SPI_SCK_GPIO_Port, ADC_SPI_SCK_Pin, 10 / .0033, -0.038);
 
 DRV8873 motor_driver(MC_SLEEP_GPIO_Port, MC_SLEEP_Pin, MC_DISABLE_GPIO_Port,
                      MC_DISABLE_Pin, MC_FAULT_GPIO_Port, MC_FAULT_Pin, &htim2,
@@ -165,8 +165,8 @@ extern "C" void abvm_update() {
              "%1.0f,"
              "%lu\r\n",
              HAL_GetTick() / 1000.0, load_cell.read(),
-             ext_pressure_sensor.get_pressure(), motor.velocity, motor.target_velocity,
-             motor.position, motor.target_pos, 0.0f, vent.get_rate(),
+             ext_pressure_sensor.get_pressure() * 70.307, motor.velocity, motor.target_velocity,
+             motor.position, motor.target_pos, motor_driver.get_current(), vent.get_rate(),
              vent.get_closed_pos(), vent.get_open_pos(), motor.faults.to_int());
     usb_comm.send((uint8_t *)data, strlen(data));
     last = HAL_GetTick();
