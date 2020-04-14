@@ -82,7 +82,7 @@ int32_t ADS1231::rejection_filter(int32_t next) {
             is_first = false;
         }
 
-        if (abs(next - value) > 1<<15) {
+        if (abs(next - value) > 1<<14) {
             if (++rejects > 10) {
                 rejects = 0;
             } else {
