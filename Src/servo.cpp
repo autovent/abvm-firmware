@@ -7,7 +7,8 @@ uint32_t Servo::Faults::to_int() {
 
 Servo::Servo(uint32_t update_period_ms, DRV8873 *driver, Encoder *encoder,
              Config cfg, PID::Params vel_pid_params, Range<float> vel_limits,
-             PID::Params pos_pid_params, Range<float> pos_limits, bool is_inverted)
+             PID::Params pos_pid_params, Range<float> pos_limits,
+             bool is_inverted)
     : driver(driver),
       encoder(encoder),
       config(cfg),
@@ -15,12 +16,12 @@ Servo::Servo(uint32_t update_period_ms, DRV8873 *driver, Encoder *encoder,
       vel_pid(vel_pid_params, update_period_ms / 1000.0),
       pos_pid(pos_pid_params, update_period_ms / 1000.0),
       pos_limits(pos_limits),
-      vel_limits(vel_limits), 
+      vel_limits(vel_limits),
       is_inverted(is_inverted),
       target_pos(0),
       target_velocity(0) {
-    encoder->is_inverted = true;
-    driver->is_inverted = true;
+  encoder->is_inverted = true;
+  driver->is_inverted = true;
 }
 
 void Servo::set_pos(float pos) { target_pos = pos; }
@@ -42,7 +43,7 @@ void Servo::zero() {
 }
 
 void Servo::reset() {
-//   vel_pid.reset();
+  //   vel_pid.reset();
   pos_pid.reset();
 }
 
@@ -51,7 +52,7 @@ float Servo::to_rad_at_output(float x) {
 }
 
 bool Servo::test_no_encoder_fault(int32_t counts) {
-  if (counts == 0 && command > 500) {
+  if (counts == 0 && fabsf(command) > .01) {
     if (++no_encoder_counts > 30) {
       faults.no_encoder = true;
       return true;
@@ -63,10 +64,9 @@ bool Servo::test_no_encoder_fault(int32_t counts) {
 }
 
 bool Servo::test_wrong_direction() {
-  if (signof(velocity) != signof(target_velocity) &&
-      (fabsf(target_velocity - velocity) > 1.4)) {
+  if (signof(command) != signof(velocity)) {
     if (++wrong_dir_counts > 30) {
-    //   faults.wrong_dir = true;
+      faults.wrong_dir = true;
       return true;
     }
   } else {
@@ -99,6 +99,7 @@ void Servo::update() {
 
   if (faults.no_encoder || faults.wrong_dir || faults.overcurrent ||
       faults.excessive_pos_error) {
+    command = 0;
     driver->set_pwm(0);
   } else {
     if (mode == Mode::POSITION) {
@@ -111,7 +112,9 @@ void Servo::update() {
       commanded_velocity =
           dt_rate_limit(target_velocity, commanded_velocity, .05);
       commanded_velocity = vel_limits.saturate(commanded_velocity);
-      driver->set_pwm(vel_pid.update(commanded_velocity, velocity));
+      command = vel_pid.update(commanded_velocity, velocity);
+
+      driver->set_pwm(command);
     }
   }
 
