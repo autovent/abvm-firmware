@@ -6,6 +6,7 @@
 #include "config.h"
 #include "control_panel.h"
 #include "controls/trapezoidal_planner.h"
+#include "drivers/ms4525do.h"
 #include "drivers/pin.h"
 #include "drv8873.h"
 #include "encoder.h"
@@ -20,10 +21,6 @@
 #include "usb_comm.h"
 #include "ventilator_controller.h"
 
-ADS1231 pressure_sensor(ADC1_PWRDN_GPIO_Port, ADC1_PWRDN_Pin, &hspi1,
-                        ADC_SPI_MISO_GPIO_Port, ADC_SPI_MISO_Pin,
-                        ADC_SPI_SCK_GPIO_Port, ADC_SPI_SCK_Pin);
-
 ADS1231 load_cell(ADC2_PWRDN_GPIO_Port, ADC2_PWRDN_Pin, &hspi1,
                   ADC_SPI_MISO_GPIO_Port, ADC_SPI_MISO_Pin,
                   ADC_SPI_SCK_GPIO_Port, ADC_SPI_SCK_Pin, 10 / .0033, 1);
@@ -36,6 +33,8 @@ DRV8873 motor_driver(MC_SLEEP_GPIO_Port, MC_SLEEP_Pin, MC_DISABLE_GPIO_Port,
 Encoder encoder(&htim4);
 
 USBComm usb_comm;
+
+MS4525DO ext_pressure_sensor(&hi2c2);
 
 ControlPanel controls(
     SW_START_GPIO_Port, SW_START_Pin, SW_STOP_GPIO_Port, SW_STOP_Pin,
@@ -133,7 +132,7 @@ extern "C" void abvm_update() {
 
   if (HAL_GetTick() > last_motion + 10) {
     load_cell.update();
-
+    ext_pressure_sensor.update();
     if (!home.is_done()) {
       home.update();
       if (home.is_done()) {
@@ -165,10 +164,10 @@ extern "C" void abvm_update() {
              "%1.0f,"
              "%1.0f,"
              "%lu\r\n",
-             HAL_GetTick() / 1000.0, load_cell.read(), 0.0f, motor.velocity,
-             motor.target_velocity, motor.position, motor.target_pos, 0.0f,
-             vent.get_rate(), vent.get_closed_pos(), vent.get_open_pos(),
-             motor.faults.to_int());
+             HAL_GetTick() / 1000.0, load_cell.read(),
+             ext_pressure_sensor.get_pressure(), motor.velocity, motor.target_velocity,
+             motor.position, motor.target_pos, 0.0f, vent.get_rate(),
+             vent.get_closed_pos(), vent.get_open_pos(), motor.faults.to_int());
     usb_comm.send((uint8_t *)data, strlen(data));
     last = HAL_GetTick();
   }
