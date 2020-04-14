@@ -56,10 +56,8 @@ void control_panel_self_test() {
   controls.set_status_led(ControlPanel::STATUS_LED_2, true);
   controls.set_status_led(ControlPanel::STATUS_LED_3, true);
   controls.set_status_led(ControlPanel::STATUS_LED_4, true);
-  controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_LEFT,
-                             ControlPanel::LEVEL_1);
-  controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_RIGHT,
-                             ControlPanel::LEVEL_6);
+  controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_LEFT, 1);
+  controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_RIGHT, 6);
 
   controls.set_buzzer_tone(ControlPanel::BUZZER_C7);
   controls.set_buzzer_volume(0.8);
@@ -77,8 +75,8 @@ void control_panel_self_test() {
   controls.set_status_led(ControlPanel::STATUS_LED_2, false);
   controls.set_status_led(ControlPanel::STATUS_LED_3, false);
   controls.set_status_led(ControlPanel::STATUS_LED_4, false);
-  controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_LEFT, ControlPanel::OFF);
-  controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_RIGHT, ControlPanel::OFF);
+  controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_LEFT, 0);
+  controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_RIGHT, 0);
 }
 
 TrapezoidalPlanner motion({.5, .5}, 10);
@@ -166,7 +164,7 @@ extern "C" void abvm_update() {
              "%1.0f,"
              "%1.0f,"
              "%1.0f,"
-             "%u\r\n",
+             "%lu\r\n",
              HAL_GetTick() / 1000.0, load_cell.read(), 0.0f, motor.velocity,
              motor.target_velocity, motor.position, motor.target_pos, 0.0f,
              vent.get_rate(), vent.get_closed_pos(), vent.get_open_pos(),
