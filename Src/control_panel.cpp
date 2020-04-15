@@ -23,8 +23,8 @@ ControlPanel::ControlPanel(
       // BUZZER
       TIM_HandleTypeDef *buzzer_timer, uint32_t buzzer_timer_channel)
     : buttons{{sw_start_mode_port, sw_start_mode_pin}, {sw_stop_port, sw_stop_pin},
-              {sw_up_left_port, sw_up_left_pin},       {sw_up_right_port, sw_up_right_pin},
-              {sw_dn_left_port, sw_dn_right_pin},      {sw_dn_right_port, sw_dn_right_pin}},
+              {sw_up_left_port, sw_up_left_pin},       {sw_dn_left_port, sw_dn_left_pin},
+              {sw_up_right_port, sw_up_right_pin},      {sw_dn_right_port, sw_dn_right_pin}},
       led_status{{led_status1_port, led_status1_pin},
                  {led_status2_port, led_status2_pin},
                  {led_status3_port, led_status3_pin},
