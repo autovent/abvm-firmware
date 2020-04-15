@@ -2,7 +2,7 @@
 #define CONTROL_PANEL_H
 
 #include "drivers/pin.h"
-#include "stm32f1xx_hal.h"
+#include "platform.h"
 
 class ControlPanel {
   public:

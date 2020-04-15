@@ -1,4 +1,4 @@
-#include "stm32f1xx_hal.h"
+#include "platform.h"
 
 class ADS1231 {
   public:

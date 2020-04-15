@@ -2,7 +2,7 @@
 #define LC064_H
 
 #include "eeprom.h"
-#include "stm32f1xx_hal.h"
+#include "platform.h"
 
 class LC064 : public EEPROM<uint16_t, uint8_t> {
   public:

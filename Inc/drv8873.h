@@ -1,7 +1,7 @@
 #ifndef DRV8873_H
 #define DRV8873_H
 
-#include "stm32f1xx_hal.h"
+#include "platform.h"
 
 #define DRV8873_REG_FAULT_STATUS \
     0x00  // (RO) |   RSVD    |   FAULT  |   OTW   |   UVLO   |   CPUV   |  OCP |

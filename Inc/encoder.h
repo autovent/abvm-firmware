@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "stm32f1xx_hal.h"
+#include "platform.h"
 
 class Encoder {
   public:
