@@ -76,6 +76,7 @@ int main(void)
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
+  
 
   /* MCU Configuration--------------------------------------------------------*/
 
@@ -99,18 +100,19 @@ int main(void)
   MX_I2C1_Init();
   MX_SPI1_Init();
   MX_SPI2_Init();
+  MX_USB_DEVICE_Init();
   MX_TIM1_Init();
   MX_TIM2_Init();
-  MX_TIM4_Init();
   MX_TIM3_Init();
-  MX_USB_DEVICE_Init();
-  MX_I2C2_Init();
+  MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
   HAL_ADC_Start(&hadc1);
 
   abvm_init();
 
   /* USER CODE END 2 */
+ 
+ 
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
@@ -136,10 +138,11 @@ void SystemClock_Config(void)
 
   /** Initializes the CPU, AHB and APB busses clocks 
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
-  RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV1;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
@@ -160,9 +163,12 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_ADC|RCC_PERIPHCLK_USB;
-  PeriphClkInit.AdcClockSelection = RCC_ADCPCLK2_DIV8;
-  PeriphClkInit.UsbClockSelection = RCC_USBCLKSOURCE_PLL_DIV1_5;
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USB|RCC_PERIPHCLK_I2C1
+                              |RCC_PERIPHCLK_TIM1|RCC_PERIPHCLK_ADC12;
+  PeriphClkInit.Adc12ClockSelection = RCC_ADC12PLLCLK_DIV1;
+  PeriphClkInit.I2c1ClockSelection = RCC_I2C1CLKSOURCE_HSI;
+  PeriphClkInit.USBClockSelection = RCC_USBCLKSOURCE_PLL_DIV1_5;
+  PeriphClkInit.Tim1ClockSelection = RCC_TIM1CLK_HCLK;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
     Error_Handler();
@@ -193,7 +199,7 @@ void Error_Handler(void)
   * @param  line: assert_param error line source number
   * @retval None
   */
-void assert_failed(uint8_t *file, uint32_t line)
+void assert_failed(char *file, uint32_t line)
 { 
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,

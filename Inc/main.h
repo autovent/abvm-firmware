@@ -28,7 +28,7 @@ extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
-#include "stm32f1xx_hal.h"
+#include "platform.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -80,6 +80,8 @@ void Error_Handler(void);
 #define MOTOR_PWM2_GPIO_Port GPIOA
 #define SW_VOL_UP_Pin GPIO_PIN_3
 #define SW_VOL_UP_GPIO_Port GPIOA
+#define UNUSED_Pin GPIO_PIN_4
+#define UNUSED_GPIO_Port GPIOF
 #define SW_VOL_DN_Pin GPIO_PIN_4
 #define SW_VOL_DN_GPIO_Port GPIOA
 #define ADC_SPI_SCK_Pin GPIO_PIN_5
@@ -100,6 +102,12 @@ void Error_Handler(void);
 #define LIMIT2_GPIO_Port GPIOB
 #define MC_SPI_CS_Pin GPIO_PIN_12
 #define MC_SPI_CS_GPIO_Port GPIOB
+#define SPI2_SCK_Pin GPIO_PIN_13
+#define SPI2_SCK_GPIO_Port GPIOB
+#define SPI2_MISO_Pin GPIO_PIN_14
+#define SPI2_MISO_GPIO_Port GPIOB
+#define SPI2_MOSI_Pin GPIO_PIN_15
+#define SPI2_MOSI_GPIO_Port GPIOB
 #define MC_SLEEP_Pin GPIO_PIN_7
 #define MC_SLEEP_GPIO_Port GPIOC
 #define MC_DISABLE_Pin GPIO_PIN_8
@@ -110,10 +118,6 @@ void Error_Handler(void);
 #define BUZZER_P_GPIO_Port GPIOA
 #define LIMIT1_Pin GPIO_PIN_10
 #define LIMIT1_GPIO_Port GPIOA
-#define SWDIO_Pin GPIO_PIN_13
-#define SWDIO_GPIO_Port GPIOA
-#define SWCLK_Pin GPIO_PIN_14
-#define SWCLK_GPIO_Port GPIOA
 #define MOTOR_PWM1_Pin GPIO_PIN_15
 #define MOTOR_PWM1_GPIO_Port GPIOA
 #define VOL_CHAR_1_Pin GPIO_PIN_10

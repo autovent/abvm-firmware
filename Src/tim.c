@@ -50,6 +50,7 @@ void MX_TIM1_Init(void)
     Error_Handler();
   }
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterOutputTrigger2 = TIM_TRGO2_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
   if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
   {
@@ -72,6 +73,10 @@ void MX_TIM1_Init(void)
   sBreakDeadTimeConfig.DeadTime = 200;
   sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;
   sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
+  sBreakDeadTimeConfig.BreakFilter = 0;
+  sBreakDeadTimeConfig.Break2State = TIM_BREAK2_DISABLE;
+  sBreakDeadTimeConfig.Break2Polarity = TIM_BREAK2POLARITY_HIGH;
+  sBreakDeadTimeConfig.Break2Filter = 0;
   sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
   if (HAL_TIMEx_ConfigBreakDeadTime(&htim1, &sBreakDeadTimeConfig) != HAL_OK)
   {
@@ -247,8 +252,10 @@ void HAL_TIM_Encoder_MspInit(TIM_HandleTypeDef* tim_encoderHandle)
     PB7     ------> TIM4_CH2 
     */
     GPIO_InitStruct.Pin = ENCODER_A_Pin|ENCODER_B_Pin;
-    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    GPIO_InitStruct.Alternate = GPIO_AF2_TIM4;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /* USER CODE BEGIN TIM4_MspInit 1 */
@@ -272,10 +279,10 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef* timHandle)
     */
     GPIO_InitStruct.Pin = BUZZER_N_Pin|BUZZER_P_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    GPIO_InitStruct.Alternate = GPIO_AF6_TIM1;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-    __HAL_AFIO_REMAP_TIM1_PARTIAL();
 
   /* USER CODE BEGIN TIM1_MspPostInit 1 */
 
@@ -294,10 +301,10 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef* timHandle)
     */
     GPIO_InitStruct.Pin = MOTOR_PWM2_Pin|MOTOR_PWM1_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    GPIO_InitStruct.Alternate = GPIO_AF1_TIM2;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-    __HAL_AFIO_REMAP_TIM2_PARTIAL_1();
 
   /* USER CODE BEGIN TIM2_MspPostInit 1 */
 

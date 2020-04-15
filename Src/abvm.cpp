@@ -33,7 +33,7 @@ Encoder encoder(&htim4);
 
 USBComm usb_comm;
 
-MS4525DO ext_pressure_sensor(&hi2c2);
+// MS4525DO ext_pressure_sensor(&hi2c2);
 
 ControlPanel controls(SW_START_GPIO_Port, SW_START_Pin, SW_STOP_GPIO_Port, SW_STOP_Pin, SW_VOL_UP_GPIO_Port,
                       SW_VOL_UP_Pin, SW_VOL_DN_GPIO_Port, SW_VOL_DN_Pin, SW_RATE_UP_GPIO_Port, SW_RATE_UP_Pin,
@@ -130,7 +130,7 @@ extern "C" void abvm_update() {
 
     if (HAL_GetTick() > last_motion + 10) {
         load_cell.update();
-        ext_pressure_sensor.update();
+        // ext_pressure_sensor.update();
         if (!home.is_done()) {
             home.update();
             if (home.is_done()) {
@@ -162,7 +162,7 @@ extern "C" void abvm_update() {
                  "%1.0f,"
                  "%1.0f,"
                  "%lu\r\n",
-                 HAL_GetTick() / 1000.0, load_cell.read(), ext_pressure_sensor.get_pressure() * 70.307, motor.velocity,
+                 HAL_GetTick() / 1000.0, load_cell.read(), /* ext_pressure_sensor.get_pressure() * 70.307 */ 0.0f, motor.velocity,
                  motor.target_velocity, motor.position, motor.target_pos, motor_driver.get_current(), vent.get_rate(),
                  vent.get_closed_pos(), vent.get_open_pos(), motor.faults.to_int());
         usb_comm.send((uint8_t *)data, strlen(data));
