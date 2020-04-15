@@ -48,7 +48,7 @@ void Servo::reset() {
 float Servo::to_rad_at_output(float x) { return 2 * M_PI * x / (config.counts_per_rev) / config.gear_reduction; }
 
 bool Servo::test_no_encoder_fault(int32_t counts) {
-    if (counts == 0 && fabsf(command) > .01) {
+    if (counts == 0 && fabsf(command) > .4f) {
         if (++no_encoder_counts > 30) {
             faults.no_encoder = true;
             return true;
@@ -60,9 +60,9 @@ bool Servo::test_no_encoder_fault(int32_t counts) {
 }
 
 bool Servo::test_wrong_direction() {
-    if (signof(command) != signof(velocity)) {
+    if (signof(velocity) != signof(target_velocity) && (fabsf(target_velocity - velocity) > 1.4)) {
         if (++wrong_dir_counts > 30) {
-            faults.wrong_dir = true;
+            // faults.wrong_dir = true;
             return true;
         }
     } else {
@@ -88,7 +88,7 @@ void Servo::update() {
     velocity = .97 * velocity + .03 * to_rad_at_output(counts) / (period_ms / 1000.0f);  // rad / s <--- Filter this
 
     test_no_encoder_fault(counts);
-    test_wrong_direction();
+    // test_wrong_direction();
     // test_excessive_pos_error();
 
     if (faults.no_encoder || faults.wrong_dir || faults.overcurrent || faults.excessive_pos_error) {
