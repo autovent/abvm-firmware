@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "ads1231.h"
+#include "bootloader.h"
 #include "config.h"
 #include "control_panel.h"
 #include "controls/trapezoidal_planner.h"
@@ -83,6 +84,8 @@ Pin homing_switch{LIMIT2_GPIO_Port, LIMIT2_Pin};
 HomingController home(&motor, &homing_switch);
 
 extern "C" void abvm_init() {
+    BootLoader::set_next_boot(BootLoader::BOOT_SELECT_APP);
+
     encoder.reset();
     usb_comm.setAsCDCConsumer();
 
