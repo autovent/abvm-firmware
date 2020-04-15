@@ -10,7 +10,9 @@ void HomingController::start() {
     // motor->set_current_limit(max_current);
 }
 
-bool HomingController::is_done() { return state == State::DONE; }
+bool HomingController::is_done() {
+    return state == State::DONE;
+}
 
 HomingController::State HomingController::update() {
     if (state == State::HOMING) {

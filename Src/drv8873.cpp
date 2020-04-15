@@ -42,7 +42,9 @@ void DRV8873::init() {
     HAL_GPIO_WritePin(cs_port, cs_pin, GPIO_PIN_SET);
 }
 
-void DRV8873::set_current_raw_meas_dma(uint32_t *dma) { current_raw_dma = dma; }
+void DRV8873::set_current_raw_meas_dma(uint32_t *dma) {
+    current_raw_dma = dma;
+}
 
 float DRV8873::get_current() {
     uint32_t val = HAL_ADC_GetValue(&hadc1);
@@ -88,13 +90,21 @@ void DRV8873::set_sleep(bool sleep) {
     }
 }
 
-bool DRV8873::get_fault() { return HAL_GPIO_ReadPin(fault_port, fault_pin) == GPIO_PIN_RESET; }
+bool DRV8873::get_fault() {
+    return HAL_GPIO_ReadPin(fault_port, fault_pin) == GPIO_PIN_RESET;
+}
 
-uint8_t DRV8873::get_reg(uint8_t reg_addr) { return run_spi_transaction(true, reg_addr, 0x00); }
+uint8_t DRV8873::get_reg(uint8_t reg_addr) {
+    return run_spi_transaction(true, reg_addr, 0x00);
+}
 
-void DRV8873::set_reg(uint8_t reg_addr, uint8_t value) { run_spi_transaction(false, reg_addr, value); }
+void DRV8873::set_reg(uint8_t reg_addr, uint8_t value) {
+    run_spi_transaction(false, reg_addr, value);
+}
 
-uint8_t DRV8873::get_status_reg() { return status_reg; }
+uint8_t DRV8873::get_status_reg() {
+    return status_reg;
+}
 
 uint8_t DRV8873::run_spi_transaction(bool read, uint8_t reg_addr, uint8_t data) {
     // TODO(cw): This is not working yet

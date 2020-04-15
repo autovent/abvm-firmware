@@ -22,10 +22,16 @@ Servo::Servo(uint32_t update_period_ms, DRV8873 *driver, Encoder *encoder, Confi
     driver->is_inverted = true;
 }
 
-void Servo::set_pos(float pos) { target_pos = pos; }
-void Servo::set_pos_deg(float pos) { target_pos = deg_to_rad(pos); }
+void Servo::set_pos(float pos) {
+    target_pos = pos;
+}
+void Servo::set_pos_deg(float pos) {
+    target_pos = deg_to_rad(pos);
+}
 
-void Servo::set_velocity(float vel) { target_velocity = vel; }
+void Servo::set_velocity(float vel) {
+    target_velocity = vel;
+}
 
 void Servo::init() {
     encoder->reset();
@@ -45,7 +51,9 @@ void Servo::reset() {
     pos_pid.reset();
 }
 
-float Servo::to_rad_at_output(float x) { return 2 * M_PI * x / (config.counts_per_rev) / config.gear_reduction; }
+float Servo::to_rad_at_output(float x) {
+    return 2 * M_PI * x / (config.counts_per_rev) / config.gear_reduction;
+}
 
 bool Servo::test_no_encoder_fault(int32_t counts) {
     if (counts == 0 && fabsf(command) > .01) {
@@ -113,4 +121,6 @@ void Servo::update() {
     last_pos = next_pos;
 }
 
-void Servo::set_mode(Mode m) { mode = m; }
+void Servo::set_mode(Mode m) {
+    mode = m;
+}

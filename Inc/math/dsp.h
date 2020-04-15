@@ -11,7 +11,9 @@ constexpr float saturate(float val, float min, float max) {
     // clang-format on
 }
 
-constexpr float signof(float x) { return (float)((x > 0) - (x < 0)); }
+constexpr float signof(float x) {
+    return (float)((x > 0) - (x < 0));
+}
 
 /**
  * Discrete Time Rate Limit

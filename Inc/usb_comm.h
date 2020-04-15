@@ -37,7 +37,9 @@ class USBComm {
     CircularBuffer<UsbData, BUFFER_SIZE> rx_buf;
 
     static void cdcConsumer(uint8_t *data, size_t len, void *arg);
-    constexpr bool is_seperator(char x) { return x == '\n' || x == '\r'; }
+    constexpr bool is_seperator(char x) {
+        return x == '\n' || x == '\r';
+    }
 };
 
 #endif  // USB_COMM_H

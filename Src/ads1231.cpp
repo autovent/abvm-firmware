@@ -31,9 +31,13 @@ void ADS1231::init() {
     HAL_GPIO_Init(miso_port, &init);
 }
 
-float ADS1231::read_volts() { return volts; }
+float ADS1231::read_volts() {
+    return volts;
+}
 
-float ADS1231::read() { return m * (volts) + b; }
+float ADS1231::read() {
+    return m * (volts) + b;
+}
 
 /**
  * Check if a measurement is ready, if it is get the value.
@@ -83,7 +87,9 @@ int32_t ADS1231::rejection_filter(int32_t next) {
     return next;
 }
 
-bool ADS1231::is_ready() { return HAL_GPIO_ReadPin(miso_port, miso_pin) == GPIO_PIN_RESET; }
+bool ADS1231::is_ready() {
+    return HAL_GPIO_ReadPin(miso_port, miso_pin) == GPIO_PIN_RESET;
+}
 
 // See datasheet page 12
 constexpr float ADS1231::convert_to_volts(int32_t x, float gain, float vref) {

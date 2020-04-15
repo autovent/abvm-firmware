@@ -48,7 +48,9 @@ bool USBComm::append(uint8_t *data, size_t len) {
     return true;
 }
 
-void USBComm::setAsCDCConsumer() { CDC_Set_Message_Consumer(cdcConsumer, this); }
+void USBComm::setAsCDCConsumer() {
+    CDC_Set_Message_Consumer(cdcConsumer, this);
+}
 
 void USBComm::cdcConsumer(uint8_t *data, size_t len, void *arg) {
     USBComm *comm = (USBComm *)arg;
