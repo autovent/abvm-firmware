@@ -20,4 +20,4 @@ private:
     static constexpr uint32_t APP_CODE = 0x3F82722AUL;
 };
 
-#endif;
+#endif
