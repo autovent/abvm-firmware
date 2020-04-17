@@ -46,36 +46,13 @@ bool ADS1231::update() {
 
         // Two's complement of 24 bit value. Make sure the sign gets
         // extended into the upper byte.
-        int32_t next_value = ((data[0] << 24) | (data[1] << 16) | (data[2] << 8)) >> 8;
+        value = ((data[0] << 24) | (data[1] << 16) | (data[2] << 8)) >> 8;
 
-        // TODO: Remove the rejection filter once the SPI bug is sorted out.
-        // !BUG: Currently there is a BUG where not all SPI clocks are being properly
-        //       transmitted.
-        // value = rejection_filter(next_value);
-        value = next_value;
         volts = convert_to_volts(value, 128, vref);
         return true;
     } else {
         return false;
     }
-}
-
-int32_t ADS1231::rejection_filter(int32_t next) {
-    if (is_first) {
-        value = next;
-        is_first = false;
-    }
-
-    if (abs(next - value) > 1 << 14) {
-        if (++rejects > 10) {
-            rejects = 0;
-        } else {
-            return value;
-        }
-    } else {
-        rejects = 0;
-    }
-    return next;
 }
 
 bool ADS1231::is_ready() { return HAL_GPIO_ReadPin(miso_port, miso_pin) == GPIO_PIN_RESET; }
