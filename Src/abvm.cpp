@@ -159,7 +159,7 @@ extern "C" void abvm_update() {
                  "%1.0f,"
                  "%1.0f,"
                  "%lu\r\n",
-                 HAL_GetTick() / 1000.0, 70.307 * pressure, motor.velocity,
+                 msec_to_sec(HAL_GetTick()), psi_to_cmH2O(pressure), motor.velocity,
                  motor.target_velocity, motor.position, motor.target_pos, motor_driver.get_current(), vent.get_rate(),
                  vent.get_closed_pos(), vent.get_open_pos(), motor.faults.to_int());
         usb_comm.send((uint8_t *)data, strlen(data));
