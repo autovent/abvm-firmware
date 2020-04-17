@@ -4,6 +4,7 @@
 
 #include "ads1231.h"
 #include "bootloader.h"
+#include "clock.h"
 #include "config.h"
 #include "control_panel.h"
 #include "controls/trapezoidal_planner.h"
@@ -130,12 +131,12 @@ extern "C" void abvm_update() {
         controls.sound_buzzer(false);
     }
 
-    if (HAL_GetTick() > last_motor + motor_interval) {
+    if (millis() > last_motor + motor_interval) {
         motor.update();
-        last_motor = HAL_GetTick();
+        last_motor = millis();
     }
 
-    if (HAL_GetTick() > last_motion + 10) {
+    if (millis() > last_motion + 10) {
         pressure_sensor.update();
 
         if (!home.is_done()) {
@@ -151,10 +152,10 @@ extern "C" void abvm_update() {
             vent.update();
         }
 
-        last_motion = HAL_GetTick();
+        last_motion = millis();
     }
 
-    if (HAL_GetTick() > last + 20) {
+    if (millis() > last + 20) {
         float pressure = pressure_sensor.read();
         static char data[128];
         snprintf(data, sizeof(data),
@@ -169,11 +170,11 @@ extern "C" void abvm_update() {
                  "%1.0f,"
                  "%1.0f,"
                  "%lu\r\n",
-                 msec_to_sec(HAL_GetTick()), psi_to_cmH2O(pressure), motor.velocity, motor.target_velocity,
-                 motor.position, motor.target_pos, motor_driver.get_current(), vent.get_rate(), vent.get_closed_pos(),
+                 msec_to_sec(millis()), psi_to_cmH2O(pressure), motor.velocity, motor.target_velocity, motor.position,
+                 motor.target_pos, motor_driver.get_current(), vent.get_rate(), vent.get_closed_pos(),
                  vent.get_open_pos(), motor.faults.to_int());
         usb_comm.send((uint8_t *)data, strlen(data));
-        last = HAL_GetTick();
+        last = millis();
     }
 
     if (controls.button_pressed_singleshot(ControlPanel::START_MODE_BTN)) {
