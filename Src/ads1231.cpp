@@ -3,6 +3,7 @@
 #include <math.h>
 
 #include "tim.h"
+#include "spi.h"
 
 #define SPI_TIMEOUT 10
 
@@ -22,14 +23,7 @@ ADS1231::ADS1231(GPIO_TypeDef *powerdown_port, uint32_t powerdown_pin, SPI_Handl
       b(b) {}
 
 void ADS1231::init() {
-    HAL_SPI_DeInit(hspi);
-    GPIO_InitTypeDef init;
-    init.Pin = miso_pin;
-    init.Mode = GPIO_MODE_INPUT;
-    init.Pull = GPIO_PULLDOWN;
-    init.Speed = GPIO_SPEED_FREQ_LOW;
-    HAL_GPIO_Init(miso_port, &init);
-}
+enable_spi(false);}
 
 float ADS1231::read_volts() { return volts; }
 
@@ -52,12 +46,8 @@ bool ADS1231::update() {
 
         // Two's complement of 24 bit value. Make sure the sign gets
         // extended into the upper byte.
-        int32_t next_value = ((data[0] << 24) | (data[1] << 16) | (data[2] << 8)) >> 8;
+        value = ((data[0] << 24) | (data[1] << 16) | (data[2] << 8)) >> 8;
 
-        // TODO: Remove the rejection filter once the SPI bug is sorted out.
-        // !BUG: Currently there is a BUG where not all SPI clocks are being properly
-        //       transmitted.
-        value = rejection_filter(next_value);
         volts = convert_to_volts(value, 128, vref);
         return true;
     } else {
@@ -65,29 +55,11 @@ bool ADS1231::update() {
     }
 }
 
-int32_t ADS1231::rejection_filter(int32_t next) {
-    if (is_first) {
-        value = next;
-        is_first = false;
-    }
-
-    if (abs(next - value) > 1 << 14) {
-        if (++rejects > 10) {
-            rejects = 0;
-        } else {
-            return value;
-        }
-    } else {
-        rejects = 0;
-    }
-    return next;
-}
-
 bool ADS1231::is_ready() { return HAL_GPIO_ReadPin(miso_port, miso_pin) == GPIO_PIN_RESET; }
 
 // See datasheet page 12
 constexpr float ADS1231::convert_to_volts(int32_t x, float gain, float vref) {
-    return (static_cast<float>(x) / (1 << 23)) * vref / gain;
+    return (static_cast<float>(x) / (1 << 24)) * vref / gain;
 }
 
 void ADS1231::set_powerdown(bool pwrdn) {
@@ -100,22 +72,7 @@ void ADS1231::set_powerdown(bool pwrdn) {
 
 void ADS1231::enable_spi(bool spi_on) {
     if (spi_on) {
-        HAL_SPI_Init(hspi);
-
-        GPIO_InitTypeDef gpio_init;
-
-        gpio_init.Pin = miso_pin;
-        gpio_init.Mode = GPIO_MODE_INPUT;
-        gpio_init.Pull = GPIO_NOPULL;
-        gpio_init.Speed = GPIO_SPEED_FREQ_LOW;
-        HAL_GPIO_Init(miso_port, &gpio_init);
-
-        gpio_init.Pin = sclk_pin;
-        gpio_init.Mode = GPIO_MODE_AF_PP;
-        gpio_init.Pull = GPIO_NOPULL;
-        gpio_init.Speed = GPIO_SPEED_FREQ_LOW;
-
-        HAL_GPIO_Init(sclk_port, &gpio_init);
+        MX_SPI1_Init();
     } else {
         HAL_SPI_DeInit(hspi);
 
