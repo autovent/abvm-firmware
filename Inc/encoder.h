@@ -6,7 +6,7 @@
 #include "platform.h"
 
 class Encoder {
-  public:
+public:
     Encoder(TIM_HandleTypeDef *tim);
 
     void init();
@@ -16,7 +16,7 @@ class Encoder {
 
     bool is_inverted;
 
-  private:
+private:
     TIM_HandleTypeDef *htim;
 };
 
