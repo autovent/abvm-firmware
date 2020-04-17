@@ -56,7 +56,7 @@ constexpr int32_t kMinBPM = 8;
 constexpr int32_t kMaxBPM = 18;
 constexpr int32_t kSlowestBreathTime_ms = 1000 * 60 / kMinBPM;
 constexpr int32_t kFastestBreathTime_ms = 1000 * 60 / kMaxBPM;
-constexpr int32_t kPlateauTime_ms = 500;
+constexpr int32_t kPlateauTime_ms = 200;
 
 #ifdef CONFIG_SHORT_SPIRIT_FINGERS
 constexpr float kIdlePositiong_deg = 0;
