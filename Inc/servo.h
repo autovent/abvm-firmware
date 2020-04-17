@@ -14,7 +14,7 @@
 #include "math/range.h"
 
 class Servo {
-  public:
+public:
     enum class Mode { OFF, VELOCITY, POSITION };
 
     struct Config {
@@ -56,7 +56,7 @@ class Servo {
     float commanded_velocity = 0;
     Faults faults = {.no_encoder = false, .wrong_dir = false};
 
-  private:
+private:
     uint32_t period_ms;
     Mode mode;
     DRV8873 *driver;

@@ -129,7 +129,7 @@
 #define DRV8873_REG_SET_VAL(reg, mask, pos, val) (reg) |= (((val) << (pos)) & (mask))
 
 class DRV8873 {
-  public:
+public:
     DRV8873(GPIO_TypeDef *sleep_port, uint16_t sleep_pin, GPIO_TypeDef *disable_port, uint16_t disable_pin,
             GPIO_TypeDef *fault_port, uint16_t fault_pin, TIM_HandleTypeDef *htim, uint32_t tim_channel_pwm1,
             uint32_t tim_channel_pwm2, SPI_HandleTypeDef *hspi, GPIO_TypeDef *cs_port, uint16_t cs_pin,
@@ -154,7 +154,7 @@ class DRV8873 {
 
     bool is_inverted;
 
-  private:
+private:
     static constexpr float VREF = 3.3f;
     static constexpr float I_MIRROR_RATIO = 1100.0f;
     static constexpr float R_LOAD = 330.0f;

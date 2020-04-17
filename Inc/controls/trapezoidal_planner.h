@@ -8,7 +8,7 @@
 #include "math/dsp.h"
 
 class TrapezoidalPlanner : public IMotionPlanner {
-  public:
+public:
     enum class State {
         IDLE,
         ACCELERATING,

@@ -10,7 +10,9 @@ void TrapezoidalPlanner::reset() {
     is_next_available = false;
 }
 
-bool TrapezoidalPlanner::is_idle() { return state == State::IDLE; }
+bool TrapezoidalPlanner::is_idle() {
+    return state == State::IDLE;
+}
 
 void TrapezoidalPlanner::set_next(MotionPlan const &p) {
     next = p;
@@ -22,7 +24,9 @@ void TrapezoidalPlanner::force_next(MotionPlan const &p) {
     state = State::IDLE;
 }
 
-float TrapezoidalPlanner::get_pos() { return p_last; }
+float TrapezoidalPlanner::get_pos() {
+    return p_last;
+}
 
 float TrapezoidalPlanner::run(float pos, float vel) {
     if (state == State::IDLE) {
@@ -108,4 +112,6 @@ float TrapezoidalPlanner::run(float pos, float vel) {
     return p_last;
 }
 
-TrapezoidalPlanner::State TrapezoidalPlanner::get_state() const { return state; }
+TrapezoidalPlanner::State TrapezoidalPlanner::get_state() const {
+    return state;
+}

@@ -2,8 +2,8 @@
 
 #include <math.h>
 
-#include "tim.h"
 #include "spi.h"
+#include "tim.h"
 
 #define SPI_TIMEOUT 10
 
@@ -23,11 +23,16 @@ ADS1231::ADS1231(GPIO_TypeDef *powerdown_port, uint32_t powerdown_pin, SPI_Handl
       b(b) {}
 
 void ADS1231::init() {
-enable_spi(false);}
+    enable_spi(false);
+}
 
-float ADS1231::read_volts() { return volts; }
+float ADS1231::read_volts() {
+    return volts;
+}
 
-float ADS1231::read() { return m * (volts) + b; }
+float ADS1231::read() {
+    return m * (volts) + b;
+}
 
 /**
  * Check if a measurement is ready, if it is get the value.
@@ -55,7 +60,9 @@ bool ADS1231::update() {
     }
 }
 
-bool ADS1231::is_ready() { return HAL_GPIO_ReadPin(miso_port, miso_pin) == GPIO_PIN_RESET; }
+bool ADS1231::is_ready() {
+    return HAL_GPIO_ReadPin(miso_port, miso_pin) == GPIO_PIN_RESET;
+}
 
 // See datasheet page 12
 constexpr float ADS1231::convert_to_volts(int32_t x, float gain, float vref) {

@@ -5,7 +5,7 @@
 #include "platform.h"
 
 class ControlPanel {
-  public:
+public:
     ControlPanel(
           // BUTTONS
           GPIO_TypeDef *sw_start_mode_port, uint16_t sw_start_mode_pin, GPIO_TypeDef *sw_stop_port,
@@ -75,7 +75,7 @@ class ControlPanel {
 
     void update();
 
-  private:
+private:
     static constexpr uint32_t CHARLIE_UPDATE_INTERVAL_MS = 1;
 
     uint32_t last_charlie_update_ms;

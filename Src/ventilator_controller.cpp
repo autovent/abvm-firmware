@@ -44,7 +44,7 @@ float VentilatorController::update() {
                     state = State::EXPIRATION;
                 }
                 motion->set_next({tidal_volume_settings[current_tv_idx], 0,
-                                  kIERatio.getInspirationPercent() * bpm_to_time_ms(rate_settings[current_rate_idx])});
+                                  kIERatio.inspiration_percent() * bpm_to_time_ms(rate_settings[current_rate_idx])});
                 break;
             case State::INSPIRATORY_HOLD:
                 state = State::EXPIRATION;
@@ -54,7 +54,7 @@ float VentilatorController::update() {
                 state = State::INSPIRATION;
                 uint32_t plateau_time = is_measure_plateau_cycle ? kPlateauTime_ms : 0;
                 motion->set_next({kOpenPosition_deg, 0,
-                                  (kIERatio.getExpirationPercent() * bpm_to_time_ms(rate_settings[current_rate_idx])) -
+                                  (kIERatio.expiration_percent() * bpm_to_time_ms(rate_settings[current_rate_idx])) -
                                         plateau_time});
                 break;
             }

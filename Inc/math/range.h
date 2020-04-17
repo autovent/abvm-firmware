@@ -6,6 +6,11 @@ struct Range {
     float min;
     float max;
 
-    float saturate(float a) { return ::saturate(a, min, max); }
-    bool in(float a) { return a >= min && a <= max; }
+    float saturate(float a) {
+        return ::saturate(a, min, max);
+    }
+    
+    bool in(float a) {
+        return a >= min && a <= max;
+    }
 };

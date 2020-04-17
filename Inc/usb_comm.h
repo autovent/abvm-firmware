@@ -6,7 +6,7 @@
 #include "circular_buffer.h"
 
 class USBComm {
-  public:
+public:
     USBComm();
 
     bool send(uint8_t *data, size_t len);
@@ -15,7 +15,7 @@ class USBComm {
 
     bool append(uint8_t *data, size_t len);
 
-    void setAsCDCConsumer();
+    void set_as_cdc_consumer();
 
     template <typename... Args>
     bool sendf(const char *fmt, Args... args) {
@@ -25,7 +25,7 @@ class USBComm {
         return result;
     }
 
-  private:
+private:
     static constexpr size_t BUFFER_SIZE = 16;
     static constexpr size_t MAX_PACKET_SIZE = 64;
 
@@ -37,7 +37,9 @@ class USBComm {
     CircularBuffer<UsbData, BUFFER_SIZE> rx_buf;
 
     static void cdcConsumer(uint8_t *data, size_t len, void *arg);
-    constexpr bool is_seperator(char x) { return x == '\n' || x == '\r'; }
+    constexpr bool is_seperator(char x) {
+        return x == '\n' || x == '\r';
+    }
 };
 
 #endif  // USB_COMM_H
