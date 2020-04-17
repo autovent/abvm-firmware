@@ -1,0 +1,34 @@
+{
+  "build": {
+    "core": "stm32",
+    "cpu": "cortex-m4",
+    "extra_flags": "-DSTM32F3 -DSTM32F303xC",
+    "f_cpu": "72000000L",
+    "libopencm3": {
+      "ldscript": "stm32f303xC.ld"
+    },
+    "mcu": "stm32f303rctx"
+  },
+  "debug": {
+    "default_tools": [
+      "stlink"
+    ],
+    "jlink_device": "STM32F303RC",
+    "openocd_target": "stm32f3x",
+    "svd_path": "STM32F303xx.svd"
+  },
+  "frameworks": [
+    "stm32cube"
+  ],
+  "name": "ABVM V1 with STM32F303",
+  "upload": {
+    "maximum_ram_size": 40960,
+    "maximum_size": 245760,
+    "protocol": "stlink",
+    "protocols": [
+      "stlink"
+    ]
+  },
+  "vendor": "AutoVENT",
+  "url": "autovent.org"
+}
