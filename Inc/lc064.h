@@ -26,7 +26,7 @@ private:
     static constexpr uint16_t TOTAL_SIZE = 8192;  // bytes
     static constexpr uint16_t PAGE_SIZE = 32;     // bytes
 
-    I2C_HandleTypßeDef *hi2c;
+    I2C_HandleTypeDef *hi2c;
     uint8_t dev_addr;
 
     bool ready();
