@@ -7,7 +7,6 @@
 #include "config.h"
 #include "control_panel.h"
 #include "controls/trapezoidal_planner.h"
-#include "drivers/ms4525do.h"
 #include "drivers/pin.h"
 #include "drv8873.h"
 #include "encoder.h"
@@ -22,8 +21,8 @@
 #include "usb_comm.h"
 #include "ventilator_controller.h"
 
-ADS1231 load_cell(ADC2_PWRDN_GPIO_Port, ADC2_PWRDN_Pin, &hspi1, ADC_SPI_MISO_GPIO_Port, ADC_SPI_MISO_Pin,
-                  ADC_SPI_SCK_GPIO_Port, ADC_SPI_SCK_Pin, 10 / .0033, -0.038);
+ADS1231 pressure_sensor(ADC2_PWRDN_GPIO_Port, ADC2_PWRDN_Pin, &hspi1, ADC_SPI_MISO_GPIO_Port, ADC_SPI_MISO_Pin,
+                  ADC_SPI_SCK_GPIO_Port, ADC_SPI_SCK_Pin,1.0f / ( 6.8948 *.0005), (1/ (6.8948 *.0005))* -0.00325f);
 
 DRV8873 motor_driver(MC_SLEEP_GPIO_Port, MC_SLEEP_Pin, MC_DISABLE_GPIO_Port, MC_DISABLE_Pin, MC_FAULT_GPIO_Port,
                      MC_FAULT_Pin, &htim2, TIM_CHANNEL_1, TIM_CHANNEL_3, &hspi2, MC_SPI_CS_GPIO_Port, MC_SPI_CS_Pin,
@@ -32,8 +31,6 @@ DRV8873 motor_driver(MC_SLEEP_GPIO_Port, MC_SLEEP_Pin, MC_DISABLE_GPIO_Port, MC_
 Encoder encoder(&htim4);
 
 USBComm usb_comm;
-
-// MS4525DO ext_pressure_sensor(&hi2c2);
 
 ControlPanel controls(SW_START_GPIO_Port, SW_START_Pin, SW_STOP_GPIO_Port, SW_STOP_Pin, SW_VOL_UP_GPIO_Port,
                       SW_VOL_UP_Pin, SW_VOL_DN_GPIO_Port, SW_VOL_DN_Pin, SW_RATE_UP_GPIO_Port, SW_RATE_UP_Pin,
@@ -89,7 +86,8 @@ extern "C" void abvm_init() {
     encoder.reset();
     usb_comm.setAsCDCConsumer();
 
-    load_cell.init();
+    pressure_sensor.init();
+    pressure_sensor.set_powerdown(false);
 
     // control_panel_self_test();
 
@@ -101,7 +99,6 @@ extern "C" void abvm_init() {
     encoder.init();
 
     motor.init();
-    load_cell.set_powerdown(false);
 
     motor_driver.set_reg(0x5, 4 << 2 | 3);
     controls.set_status_led(ControlPanel::STATUS_LED_1, true);
@@ -129,8 +126,8 @@ extern "C" void abvm_update() {
     }
 
     if (HAL_GetTick() > last_motion + 10) {
-        load_cell.update();
-        // ext_pressure_sensor.update();
+        pressure_sensor.update();
+
         if (!home.is_done()) {
             home.update();
             if (home.is_done()) {
@@ -148,9 +145,9 @@ extern "C" void abvm_update() {
     }
 
     if (HAL_GetTick() > last + 20) {
+        float pressure = pressure_sensor.read();
         static char data[128];
         snprintf(data, sizeof(data),
-                 "%1.3f,"
                  "%1.3f,"
                  "%1.3f,"
                  "%1.3f,"
@@ -162,7 +159,7 @@ extern "C" void abvm_update() {
                  "%1.0f,"
                  "%1.0f,"
                  "%lu\r\n",
-                 HAL_GetTick() / 1000.0, load_cell.read(), /* ext_pressure_sensor.get_pressure() * 70.307 */ 0.0f, motor.velocity,
+                 HAL_GetTick() / 1000.0, 70.307 * pressure, motor.velocity,
                  motor.target_velocity, motor.position, motor.target_pos, motor_driver.get_current(), vent.get_rate(),
                  vent.get_closed_pos(), vent.get_open_pos(), motor.faults.to_int());
         usb_comm.send((uint8_t *)data, strlen(data));
