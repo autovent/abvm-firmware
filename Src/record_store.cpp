@@ -7,7 +7,9 @@
 
 RecordStore::RecordStore(EEPROM<uint16_t, uint8_t> *eeprom) : eeprom(eeprom), num_entries(0) {}
 
-bool RecordStore::init() { return add_entry("header", &header, sizeof(header), sizeof(header)); }
+bool RecordStore::init() {
+    return add_entry("header", &header, sizeof(header), sizeof(header));
+}
 
 bool RecordStore::add_entry(const char *name, void *data, uint16_t size_bytes, uint16_t max_size_bytes) {
     assert(name != nullptr);

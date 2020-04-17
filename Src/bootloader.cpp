@@ -1,7 +1,8 @@
 #include "bootloader.h"
+
 #include "platform.h"
 
-volatile uint32_t *BootLoader::BKP_REG = (volatile uint32_t*)0x20004000;
+volatile uint32_t *BootLoader::BKP_REG = (volatile uint32_t *)0x20004000;
 
 void BootLoader::set_next_boot(boot_select sel) {
     if (sel == BOOT_SELECT_APP) {

@@ -2,7 +2,7 @@
 #define PID_H
 
 class PID {
-  public:
+public:
     struct Params {
         float Kp;
         float Ki;
@@ -19,7 +19,7 @@ class PID {
 
     Params params;
 
-  private:
+private:
     float err_acc_;
     float period_;
     float err_last_;

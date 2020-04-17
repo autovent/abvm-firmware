@@ -6,7 +6,7 @@
 #include "eeprom.h"
 
 class RecordStore {
-  public:
+public:
     static constexpr uint32_t VERSION_NUM = 1;
 
     RecordStore(EEPROM<uint16_t, uint8_t> *eeprom);
@@ -23,7 +23,7 @@ class RecordStore {
     bool load(const char *name, bool force_load);
     bool store(const char *name);
 
-  private:
+private:
     static constexpr uint16_t MAX_BUFFER_SIZE_BYTES = 256;
     static constexpr uint16_t MAX_NUM_ENTRIES = 8;
     static constexpr uint16_t NUM_HEADER_ENTRIES = 1;

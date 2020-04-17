@@ -22,7 +22,8 @@
 #include "ventilator_controller.h"
 
 ADS1231 pressure_sensor(ADC2_PWRDN_GPIO_Port, ADC2_PWRDN_Pin, &hspi1, ADC_SPI_MISO_GPIO_Port, ADC_SPI_MISO_Pin,
-                  ADC_SPI_SCK_GPIO_Port, ADC_SPI_SCK_Pin,1.0f / ( 6.8948 *.0005), (1/ (6.8948 *.0005))* -0.00325f);
+                        ADC_SPI_SCK_GPIO_Port, ADC_SPI_SCK_Pin, 1.0f / (6.8948 * .0005),
+                        (1 / (6.8948 * .0005)) * -0.00325f);
 
 DRV8873 motor_driver(MC_SLEEP_GPIO_Port, MC_SLEEP_Pin, MC_DISABLE_GPIO_Port, MC_DISABLE_Pin, MC_FAULT_GPIO_Port,
                      MC_FAULT_Pin, &htim2, TIM_CHANNEL_1, TIM_CHANNEL_3, &hspi2, MC_SPI_CS_GPIO_Port, MC_SPI_CS_Pin,
@@ -84,7 +85,7 @@ extern "C" void abvm_init() {
     BootLoader::set_next_boot(BootLoader::BOOT_SELECT_APP);
 
     encoder.reset();
-    usb_comm.setAsCDCConsumer();
+    usb_comm.set_as_cdc_consumer();
 
     pressure_sensor.init();
     pressure_sensor.set_powerdown(false);
@@ -159,9 +160,9 @@ extern "C" void abvm_update() {
                  "%1.0f,"
                  "%1.0f,"
                  "%lu\r\n",
-                 msec_to_sec(HAL_GetTick()), psi_to_cmH2O(pressure), motor.velocity,
-                 motor.target_velocity, motor.position, motor.target_pos, motor_driver.get_current(), vent.get_rate(),
-                 vent.get_closed_pos(), vent.get_open_pos(), motor.faults.to_int());
+                 msec_to_sec(HAL_GetTick()), psi_to_cmH2O(pressure), motor.velocity, motor.target_velocity,
+                 motor.position, motor.target_pos, motor_driver.get_current(), vent.get_rate(), vent.get_closed_pos(),
+                 vent.get_open_pos(), motor.faults.to_int());
         usb_comm.send((uint8_t *)data, strlen(data));
         last = HAL_GetTick();
     }

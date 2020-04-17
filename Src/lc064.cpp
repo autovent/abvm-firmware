@@ -4,7 +4,9 @@
 
 LC064::LC064(I2C_HandleTypeDef *hi2c, uint8_t dev_addr) : hi2c(hi2c) {}
 
-void LC064::init() { dev_addr = DEV_ADDR_BASE | ((dev_addr & DEV_ADDR_MASK) << DEV_ADDR_SHIFT); }
+void LC064::init() {
+    dev_addr = DEV_ADDR_BASE | ((dev_addr & DEV_ADDR_MASK) << DEV_ADDR_SHIFT);
+}
 
 bool LC064::read(uint16_t addr, uint8_t *data, uint16_t len) {
     assert(addr <= TOTAL_SIZE);

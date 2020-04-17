@@ -8,17 +8,25 @@ template <typename T, size_t S, bool IsWrapable = false>
 class CircularBuffer {
     static_assert(std::is_pod<T>::value, "T must be POD");
 
-  public:
+public:
     CircularBuffer() : buf{0}, front(0), back(0) {}
     ~CircularBuffer() = default;
 
-    constexpr bool empty() noexcept { return back == front; }
+    constexpr bool empty() noexcept {
+        return back == front;
+    }
 
-    constexpr bool full() noexcept { return (back) == incrementIndex(front); }
+    constexpr bool full() noexcept {
+        return (back) == incrementIndex(front);
+    }
 
-    static constexpr size_t max_size(void) noexcept { return S; }
+    static constexpr size_t max_size(void) noexcept {
+        return S;
+    }
 
-    size_t count(void) { return front - back + (front < back ? (S + 1) : 0); }
+    size_t count(void) {
+        return front - back + (front < back ? (S + 1) : 0);
+    }
 
     /**
      * @brief Push the given value to the buffer
@@ -63,7 +71,9 @@ class CircularBuffer {
      * @brief Returns a pointer to the value at the back of the buffer or n
      * counts from it
      */
-    inline T *peek(uint8_t n = 0) noexcept { return empty() ? nullptr : &buf[incrementIndexByN(back, n)]; }
+    inline T *peek(uint8_t n = 0) noexcept {
+        return empty() ? nullptr : &buf[incrementIndexByN(back, n)];
+    }
 
     /**
      * @brief Returns the value at the back of the buffer
@@ -98,14 +108,18 @@ class CircularBuffer {
         return true;
     }
 
-  private:
+private:
     T buf[S + 1];
     volatile size_t front;
     volatile size_t back;
 
-    static constexpr size_t incrementIndex(size_t idx) noexcept { return (idx == S) ? 0 : (idx + 1); }
+    static constexpr size_t incrementIndex(size_t idx) noexcept {
+        return (idx == S) ? 0 : (idx + 1);
+    }
 
-    static constexpr size_t incrementIndexByN(size_t idx, size_t n) noexcept { return (idx + n) % (S + 1); }
+    static constexpr size_t incrementIndexByN(size_t idx, size_t n) noexcept {
+        return (idx + n) % (S + 1);
+    }
 };
 
 #endif  // CIRCULAR_BUFFER_H)_

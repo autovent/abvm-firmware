@@ -16,8 +16,12 @@ struct IERatio {
     float inspiration;
     float expiration;
 
-    inline const float getInspirationPercent() const { return inspiration / (inspiration + expiration); }
-    inline const float getExpirationPercent() const { return expiration / (inspiration + expiration); }
+    inline const float inspiration_percent() const {
+        return inspiration / (inspiration + expiration);
+    }
+    inline const float expiration_percent() const {
+        return expiration / (inspiration + expiration);
+    }
 };
 
 constexpr Servo::Config kGoBilda_YellowJacket_5202_0002_0188_30RPM = {188, 28};

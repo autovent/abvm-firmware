@@ -3,7 +3,9 @@
 #include "i2c.h"
 MS4525DO::MS4525DO(I2C_HandleTypeDef *hi2c) : hi2c(hi2c), state(State::IDLE) {}
 
-void MS4525DO::init() { state = State::IDLE; }
+void MS4525DO::init() {
+    state = State::IDLE;
+}
 
 bool MS4525DO::measure() {
     uint8_t data[4] = {0};

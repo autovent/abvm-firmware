@@ -6,7 +6,7 @@
 #include "servo.h"
 
 class HomingController {
-  public:
+public:
     enum class State { IDLE = 0, HOMING, DONE };
 
     // TODO: Add max current limit
@@ -16,7 +16,7 @@ class HomingController {
     bool is_done();
     State update();
 
-  private:
+private:
     Servo *motor;
     Pin *home_switch;
     State state;

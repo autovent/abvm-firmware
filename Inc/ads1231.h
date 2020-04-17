@@ -1,7 +1,7 @@
 #include "platform.h"
 
 class ADS1231 {
-  public:
+public:
     ADS1231();
 
     ADS1231(GPIO_TypeDef *powerdown_port, uint32_t powerdown_pin, SPI_HandleTypeDef *hspi, GPIO_TypeDef *miso_port,
@@ -20,7 +20,7 @@ class ADS1231 {
 
     void set_powerdown(bool pwrdn);
 
-  private:
+private:
     static constexpr uint32_t kOffsetBinaryCodeZero = (1 << 23);  // 2^23 is the halfway point
 
     SPI_HandleTypeDef *hspi;
