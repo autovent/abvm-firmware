@@ -32,8 +32,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "main.h"
-#include "stm32f1xx.h"
-#include "stm32f1xx_hal.h"
+#include "stm32f3xx.h"
+#include "stm32f3xx_hal.h"
 
 /* USER CODE BEGIN INCLUDE */
 
@@ -63,17 +63,15 @@
   */
 
 /*---------- -----------*/
-#define USBD_MAX_NUM_INTERFACES     1
+#define USBD_MAX_NUM_INTERFACES     1U
 /*---------- -----------*/
-#define USBD_MAX_NUM_CONFIGURATION     1
+#define USBD_MAX_NUM_CONFIGURATION     1U
 /*---------- -----------*/
-#define USBD_MAX_STR_DESC_SIZ     512
+#define USBD_MAX_STR_DESC_SIZ     512U
 /*---------- -----------*/
-#define USBD_DEBUG_LEVEL     0
+#define USBD_DEBUG_LEVEL     0U
 /*---------- -----------*/
-#define USBD_SELF_POWERED     1
-/*---------- -----------*/
-#define MAX_STATIC_ALLOC_SIZE     512
+#define USBD_SELF_POWERED     1U
 
 /****************************************/
 /* #define for FS and HS identification */

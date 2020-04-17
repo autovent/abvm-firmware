@@ -1,5 +1,5 @@
 #include "bootloader.h"
-#include "stm32f1xx_hal.h"
+#include "platform.h"
 
 volatile uint32_t *BootLoader::BKP_REG = (volatile uint32_t*)0x20004000;
 
