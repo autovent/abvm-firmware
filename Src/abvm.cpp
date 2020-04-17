@@ -120,6 +120,15 @@ uint32_t debounce_intvl = 10;
 
 extern "C" void abvm_update() {
     controls.update();
+    if (!HAL_GPIO_ReadPin(MEASURE_12V_GPIO_Port, MEASURE_12V_Pin)) {
+        controls.set_buzzer_volume(1);
+        controls.set_buzzer_tone(ControlPanel::BUZZER_C7);
+        controls.sound_buzzer(true);
+    } else {
+        controls.set_buzzer_volume(1);
+        controls.set_buzzer_tone(ControlPanel::BUZZER_C7);
+        controls.sound_buzzer(false);
+    }
 
     if (HAL_GetTick() > last_motor + motor_interval) {
         motor.update();
@@ -173,7 +182,7 @@ extern "C" void abvm_update() {
     }
 
     if (controls.button_pressed_singleshot(ControlPanel::STOP_BTN)) {
-        vent.is_operational = false;
+        vent.stop();
         controls.set_status_led(ControlPanel::STATUS_LED_2, false);
     }
 
