@@ -6,6 +6,7 @@
 uint32_t millis() {
     return HAL_GetTick();
 }
-uint32_t micros() {
+
+uint64_t micros() {
     return TIM_GetMicros();
 }
