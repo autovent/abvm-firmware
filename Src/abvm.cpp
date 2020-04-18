@@ -34,13 +34,26 @@ Encoder encoder(&htim4);
 
 USBComm usb_comm;
 
-ControlPanel controls(SW_START_GPIO_Port, SW_START_Pin, SW_STOP_GPIO_Port, SW_STOP_Pin, SW_VOL_UP_GPIO_Port,
-                      SW_VOL_UP_Pin, SW_VOL_DN_GPIO_Port, SW_VOL_DN_Pin, SW_RATE_UP_GPIO_Port, SW_RATE_UP_Pin,
-                      SW_RATE_DN_GPIO_Port, SW_RATE_DN_Pin, LED_POWER_GPIO_Port, LED_POWER_Pin, LED_FAULT_GPIO_Port,
-                      LED_FAULT_Pin, LED_IN_GPIO_Port, LED_IN_Pin, LED_OUT_GPIO_Port, LED_OUT_Pin, VOL_CHAR_1_GPIO_Port,
-                      VOL_CHAR_1_Pin, VOL_CHAR_2_GPIO_Port, VOL_CHAR_2_Pin, VOL_CHAR_3_GPIO_Port, VOL_CHAR_3_Pin,
-                      RATE_CHAR_1_GPIO_Port, RATE_CHAR_1_Pin, RATE_CHAR_2_GPIO_Port, RATE_CHAR_2_Pin,
-                      RATE_CHAR_3_GPIO_Port, RATE_CHAR_3_Pin, &htim1, TIM_CHANNEL_1);
+Pin sw_start_pin{SW_START_GPIO_Port, SW_START_Pin};
+Pin sw_stop_pin{SW_STOP_GPIO_Port, SW_STOP_Pin};
+Pin sw_vol_up_pin{SW_VOL_UP_GPIO_Port, SW_VOL_UP_Pin};
+Pin sw_vol_dn_pin{SW_VOL_DN_GPIO_Port, SW_VOL_DN_Pin};
+Pin sw_rate_up_pin{SW_RATE_UP_GPIO_Port, SW_RATE_UP_Pin};
+Pin sw_rate_dn_pin{SW_RATE_DN_GPIO_Port, SW_RATE_DN_Pin};
+Pin led_power_pin{LED_POWER_GPIO_Port, LED_POWER_Pin};
+Pin led_fault_pin{LED_FAULT_GPIO_Port, LED_FAULT_Pin};
+Pin led_in_pin{LED_IN_GPIO_Port, LED_IN_Pin};
+Pin led_out_pin{LED_OUT_GPIO_Port, LED_OUT_Pin};
+Pin vol_char_1_pin{VOL_CHAR_1_GPIO_Port, VOL_CHAR_1_Pin};
+Pin vol_char_2_pin{VOL_CHAR_2_GPIO_Port, VOL_CHAR_2_Pin};
+Pin vol_char_3_pin{VOL_CHAR_3_GPIO_Port, VOL_CHAR_3_Pin};
+Pin rate_char_1_pin{RATE_CHAR_1_GPIO_Port, RATE_CHAR_1_Pin};
+Pin rate_char_2_pin{RATE_CHAR_2_GPIO_Port, RATE_CHAR_2_Pin};
+Pin rate_char_3_pin{RATE_CHAR_3_GPIO_Port, RATE_CHAR_3_Pin};
+
+ControlPanel controls(&sw_start_pin, &sw_stop_pin, &sw_vol_up_pin, &sw_vol_dn_pin, &sw_rate_up_pin, &sw_rate_dn_pin,
+                      &led_power_pin, &led_fault_pin, &led_in_pin, &led_out_pin, &vol_char_1_pin, &vol_char_2_pin,
+                      &vol_char_3_pin, &rate_char_1_pin, &rate_char_2_pin, &rate_char_3_pin, &htim1, TIM_CHANNEL_1);
 
 LC064 eeprom(&hi2c1, 0);
 
@@ -168,32 +181,32 @@ extern "C" void abvm_update() {
         last = millis();
     }
 
-    if (controls.button_pressed_singleshot(ControlPanel::START_MODE_BTN)) {
+    if (controls.button_update(ControlPanel::START_MODE_BTN).state == Button::State::PRESSED) {
         vent.is_operational = true;
         controls.set_status_led(ControlPanel::STATUS_LED_2, true);
     }
 
-    if (controls.button_pressed_singleshot(ControlPanel::STOP_BTN)) {
+    if (controls.button_update(ControlPanel::STOP_BTN).state == Button::State::PRESSED) {
         vent.stop();
         controls.set_status_led(ControlPanel::STATUS_LED_2, false);
     }
 
-    if (controls.button_pressed_singleshot(ControlPanel::UP_LEFT_BTN)) {
+    if (controls.button_update(ControlPanel::UP_LEFT_BTN).state == Button::State::PRESSED) {
         vent.bump_tv(1);
         controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_LEFT, vent.get_tv_idx() + 1);
     }
 
-    if (controls.button_pressed_singleshot(ControlPanel::DN_LEFT_BTN)) {
+    if (controls.button_update(ControlPanel::DN_LEFT_BTN).state == Button::State::PRESSED) {
         vent.bump_tv(-1);
         controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_LEFT, vent.get_tv_idx() + 1);
     }
 
-    if (controls.button_pressed_singleshot(ControlPanel::UP_RIGHT_BTN)) {
+    if (controls.button_update(ControlPanel::UP_RIGHT_BTN).state == Button::State::PRESSED) {
         vent.bump_rate(1);
         controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_RIGHT, vent.get_rate_idx() + 1);
     }
 
-    if (controls.button_pressed_singleshot(ControlPanel::DN_RIGHT_BTN)) {
+    if (controls.button_update(ControlPanel::DN_RIGHT_BTN).state == Button::State::PRESSED) {
         vent.bump_rate(-1);
         controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_RIGHT, vent.get_rate_idx() + 1);
     }
