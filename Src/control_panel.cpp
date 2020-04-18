@@ -3,6 +3,7 @@
 #include <assert.h>
 
 #include "clock.h"
+#include "math/dsp.h"
 
 ControlPanel::ControlPanel(Pin *sw_start, Pin *sw_stop, Pin *sw_up_left, Pin *sw_dn_left, Pin *sw_up_right,
                            Pin *sw_dn_right, Pin *led_status1, Pin *led_status2, Pin *led_status3, Pin *led_status4,
@@ -34,7 +35,7 @@ void ControlPanel::set_status_led(StatusLed led, bool val) {
 void ControlPanel::set_led_bar_graph(BarGraph bar, uint8_t level) {
     assert(bar == BAR_GRAPH_RIGHT || bar == BAR_GRAPH_LEFT);
     BarState &bs = bar_states[bar];
-
+    level = saturate(level, 0, 6);
     if (level != bs.level) {
         bs.level = level;
         bs.current = 1;
