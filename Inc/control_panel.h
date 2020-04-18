@@ -2,35 +2,22 @@
 #define CONTROL_PANEL_H
 
 #include "drivers/pin.h"
-#include "ui/button.h"
 #include "platform.h"
+#include "ui/button.h"
 
 class ControlPanel {
 public:
-    ControlPanel(
-        Pin *sw_start,
-        Pin *sw_stop,
-        Pin *sw_up_left,
-        Pin *sw_dn_left,
-        Pin *sw_up_right,
-        Pin *sw_dn_right,
+    ControlPanel(Pin *sw_start, Pin *sw_stop, Pin *sw_up_left, Pin *sw_dn_left, Pin *sw_up_right, Pin *sw_dn_right,
 
-        // Status Leds
-        Pin *led_status1,
-        Pin *led_status2,
-        Pin *led_status3,
-        Pin *led_status4,
+                 // Status Leds
+                 Pin *led_status1, Pin *led_status2, Pin *led_status3, Pin *led_status4,
 
-        // Charlieplex bar graph
-        Pin *led_bar_left_char1,
-        Pin *led_bar_left_char2,
-        Pin *led_bar_left_char3,
-        Pin *led_bar_right_char1,
-        Pin *led_bar_right_char2,
-        Pin *led_bar_right_char3,
+                 // Charlieplex bar graph
+                 Pin *led_bar_left_char1, Pin *led_bar_left_char2, Pin *led_bar_left_char3, Pin *led_bar_right_char1,
+                 Pin *led_bar_right_char2, Pin *led_bar_right_char3,
 
-        // BUZZER
-        TIM_HandleTypeDef *buzzer_timer, uint32_t buzzer_timer_channel, uint32_t debounce_time_ms = 10);
+                 // BUZZER
+                 TIM_HandleTypeDef *buzzer_timer, uint32_t buzzer_timer_channel, uint32_t debounce_time_ms = 10);
 
     enum PanelButton {
         START_MODE_BTN,
@@ -68,6 +55,10 @@ public:
     };
 
     Button::Event button_update(PanelButton btn);
+    static constexpr size_t num_buttons() {
+        return static_cast<size_t>(PanelButton::NUM_PANEL_BUTTONS);
+    }
+    Button *get_buttons(size_t i);
 
     void set_status_led(StatusLed led, bool val);
     void set_led_bar_graph(BarGraph bar, uint8_t level);
@@ -77,6 +68,7 @@ public:
     void sound_buzzer(bool on);
 
     void update();
+
 
 private:
     static constexpr uint32_t CHARLIE_UPDATE_INTERVAL_MS = 1;
