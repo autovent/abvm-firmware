@@ -203,7 +203,6 @@ extern "C" void abvm_update() {
                 HAL_Delay(50);
                 controls.sound_buzzer(false);
                 vent.start();
-                vent.is_operational = true;
                 controls.set_status_led(ControlPanel::STATUS_LED_2, true);
             }
             break;

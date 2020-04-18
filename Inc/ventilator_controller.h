@@ -25,6 +25,8 @@ public:
 
     void reset();
 
+    bool is_running() { return is_operational;  }
+
     inline void bump_tv(int i) {
         current_tv_idx = saturate(current_tv_idx + i, 0, kNumTVSettings - 1);
     }
@@ -47,7 +49,6 @@ public:
         return rate_settings[get_rate_idx()];
     }
 
-    bool is_operational;
 
 private:
     IMotionPlanner *motion;
@@ -65,4 +66,6 @@ private:
 
     uint8_t current_tv_idx;
     uint8_t current_rate_idx;
+    bool is_operational;
+
 };
