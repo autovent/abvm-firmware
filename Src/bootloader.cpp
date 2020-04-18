@@ -1,27 +1,24 @@
 #include "bootloader.h"
-
 #include "platform.h"
 
-volatile uint32_t *BootLoader::BKP_REG = (volatile uint32_t *)0x20004000;
+// bootloader reset vector is the second word of system memory
+const uint32_t *BootLoader::BOOTLOADER_RESET_VECTOR = (uint32_t*)0x1fffd804;
+const void (*BootLoader::bootloader)(void) = (const void (*)(void))(*BOOTLOADER_RESET_VECTOR);
 
-void BootLoader::set_next_boot(boot_select sel) {
-    if (sel == BOOT_SELECT_APP) {
-        *BKP_REG = APP_CODE;
-    } else if (sel == BOOT_SELECT_BOOTLOADER) {
-        *BKP_REG = BOOTLOADER_CODE;
-    }
-}
+void BootLoader::start_bootloader() {
+    // deinit peripherals
+    HAL_DeInit();
 
-BootLoader::boot_select BootLoader::get_next_boot() {
-    if (*BKP_REG == APP_CODE) {
-        return BOOT_SELECT_APP;
-    } else if (*BKP_REG == BOOTLOADER_CODE) {
-        return BOOT_SELECT_BOOTLOADER;
-    } else {
-        return BOOT_SELECT_UNKNOWN;
-    }
-}
+    // turn off systick
+    SysTick->CTRL = 0;
+    SysTick->LOAD = 0;
+    SysTick->VAL = 0;
 
-void BootLoader::reboot() {
-    NVIC_SystemReset();
+    // set stack pointer to default value
+    __set_MSP(0x20001000);
+
+    // jump to the bootloader
+    bootloader();
+
+    while(1);
 }

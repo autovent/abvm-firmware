@@ -4,20 +4,11 @@
 
 class BootLoader {
 public:
-    enum boot_select {
-        BOOT_SELECT_UNKNOWN,
-        BOOT_SELECT_BOOTLOADER,
-        BOOT_SELECT_APP,
-    };
-
-    static void set_next_boot(boot_select sel);
-    static boot_select get_next_boot();
-    static void reboot();
+    static void start_bootloader();
 
 private:
-    static volatile uint32_t *BKP_REG;
-    static constexpr uint32_t BOOTLOADER_CODE = 0x544F4F42UL;
-    static constexpr uint32_t APP_CODE = 0x3F82722AUL;
+    static const uint32_t *BOOTLOADER_RESET_VECTOR;
+    static const void (*bootloader)(void);
 };
 
 #endif
