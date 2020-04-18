@@ -7,7 +7,6 @@
 class IUI {
 public:
     enum class State { STOPPED, STARTED, ALARMED };
-    enum class View { ADJUST, PRESSURE };
 
     enum class Event {
         NONE = 0,               /// No event to emit
@@ -48,9 +47,6 @@ public:
     virtual Event update() = 0;
 
     virtual void set_state(State s) = 0;
-
-    // ? We may want to remove the view from the abstract UI
-    virtual void set_view(View v) = 0;
 
     virtual void set_value(DisplayValue param, float value) = 0;
 
