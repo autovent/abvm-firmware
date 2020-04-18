@@ -1,62 +1,34 @@
 #include "control_panel.h"
-#include "clock.h"
 
 #include <assert.h>
 
-ControlPanel::ControlPanel(
-      // BUTTONS
-      GPIO_TypeDef *sw_start_mode_port, uint16_t sw_start_mode_pin, GPIO_TypeDef *sw_stop_port, uint16_t sw_stop_pin,
-      GPIO_TypeDef *sw_up_left_port, uint16_t sw_up_left_pin, GPIO_TypeDef *sw_dn_left_port, uint16_t sw_dn_left_pin,
-      GPIO_TypeDef *sw_up_right_port, uint16_t sw_up_right_pin, GPIO_TypeDef *sw_dn_right_port,
-      uint16_t sw_dn_right_pin,
+#include "clock.h"
 
-      // STATUS LEDS
-      GPIO_TypeDef *led_status1_port, uint16_t led_status1_pin, GPIO_TypeDef *led_status2_port,
-      uint16_t led_status2_pin, GPIO_TypeDef *led_status3_port, uint16_t led_status3_pin,
-      GPIO_TypeDef *led_status4_port, uint16_t led_status4_pin,
-
-      // CHARLIEPLEXED BAR GRAPH LEDS
-      GPIO_TypeDef *led_bar_left_char1_port, uint16_t led_bar_left_char1_pin, GPIO_TypeDef *led_bar_left_char2_port,
-      uint16_t led_bar_left_char2_pin, GPIO_TypeDef *led_bar_left_char3_port, uint16_t led_bar_left_char3_pin,
-      GPIO_TypeDef *led_bar_right_char1_port, uint16_t led_bar_right_char1_pin, GPIO_TypeDef *led_bar_right_char2_port,
-      uint16_t led_bar_right_char2_pin, GPIO_TypeDef *led_bar_right_char3_port, uint16_t led_bar_right_char3_pin,
-
-      // BUZZER
-      TIM_HandleTypeDef *buzzer_timer, uint32_t buzzer_timer_channel)
-    : buttons{{sw_start_mode_port, sw_start_mode_pin}, {sw_stop_port, sw_stop_pin},
-              {sw_up_left_port, sw_up_left_pin},       {sw_dn_left_port, sw_dn_left_pin},
-              {sw_up_right_port, sw_up_right_pin},     {sw_dn_right_port, sw_dn_right_pin}},
-      led_status{{led_status1_port, led_status1_pin},
-                 {led_status2_port, led_status2_pin},
-                 {led_status3_port, led_status3_pin},
-                 {led_status4_port, led_status4_pin}},
-      led_bar_left{{led_bar_left_char1_port, led_bar_left_char1_pin},
-                   {led_bar_left_char2_port, led_bar_left_char2_pin},
-                   {led_bar_left_char3_port, led_bar_left_char3_pin}},
-      led_bar_right{{led_bar_right_char1_port, led_bar_right_char1_pin},
-                    {led_bar_right_char2_port, led_bar_right_char2_pin},
-                    {led_bar_right_char3_port, led_bar_right_char3_pin}},
+ControlPanel::ControlPanel(Pin *sw_start, Pin *sw_stop, Pin *sw_up_left, Pin *sw_dn_left, Pin *sw_up_right,
+                           Pin *sw_dn_right, Pin *led_status1, Pin *led_status2, Pin *led_status3, Pin *led_status4,
+                           Pin *led_bar_left_char1, Pin *led_bar_left_char2, Pin *led_bar_left_char3,
+                           Pin *led_bar_right_char1, Pin *led_bar_right_char2, Pin *led_bar_right_char3,
+                           // BUZZER
+                           TIM_HandleTypeDef *buzzer_timer, uint32_t buzzer_timer_channel, uint32_t debounce_time_ms)
+    : buttons{{sw_start, debounce_time_ms, true},    {sw_stop, debounce_time_ms, true},
+              {sw_up_left, debounce_time_ms, true},  {sw_dn_left, debounce_time_ms, true},
+              {sw_up_right, debounce_time_ms, true}, {sw_dn_right, debounce_time_ms, true}},
+      led_status{led_status1, led_status2, led_status3, led_status4},
+      led_bar_left{led_bar_left_char1, led_bar_left_char2, led_bar_left_char3},
+      led_bar_right{led_bar_right_char1, led_bar_right_char2, led_bar_right_char3},
 
       buzzer_timer(buzzer_timer),
       buzzer_timer_channel(buzzer_timer_channel) {}
 
-bool ControlPanel::button_pressed(PanelButton btn) {
+Button::Event ControlPanel::button_update(PanelButton btn) {
     assert(btn >= 0 && btn < NUM_PANEL_BUTTONS);
 
-    return GPIO_PIN_RESET == buttons[btn].read();
-}
-
-bool ControlPanel::button_pressed_singleshot(PanelButton btn) {
-    bool button_state = button_pressed(btn);
-    bool ret_state = button_state && !prev_panel_button_state[btn];
-    prev_panel_button_state[btn] = button_state;
-
-    return ret_state;
+    return buttons[btn].update();
 }
 
 void ControlPanel::set_status_led(StatusLed led, bool val) {
     assert(led >= 0 && led < sizeof(led_status));
-    led_status[led].write(val);
+    led_status[led]->write(val);
 }
 
 void ControlPanel::set_led_bar_graph(BarGraph bar, uint8_t level) {
@@ -133,7 +105,7 @@ void ControlPanel::update() {
     }
 }
 
-void ControlPanel::charlieplex(Pin ios[3], int value) {
+void ControlPanel::charlieplex(Pin *ios[3], int value) {
     assert(value >= 0 && value <= 6);
 
     uint32_t mode[3];
@@ -204,11 +176,11 @@ void ControlPanel::charlieplex(Pin ios[3], int value) {
     init.Speed = GPIO_SPEED_FREQ_LOW;
 
     for (size_t i = 0; i < 3; i++) {
-        init.Pin = ios[i].pin;
+        init.Pin = ios[i]->pin;
         init.Mode = mode[i];
-        HAL_GPIO_Init(ios[i].port, &init);
+        HAL_GPIO_Init(ios[i]->port, &init);
         if (mode[i] == GPIO_MODE_OUTPUT_PP) {
-            ios[i].write(out[i]);
+            ios[i]->write(out[i]);
         }
     }
 }
