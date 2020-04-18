@@ -19,9 +19,9 @@
 #include "servo.h"
 #include "spi.h"
 #include "tim.h"
+#include "ui/ui_v1.h"
 #include "usb_comm.h"
 #include "ventilator_controller.h"
-
 ADS1231 pressure_sensor(ADC2_PWRDN_GPIO_Port, ADC2_PWRDN_Pin, &hspi1, ADC_SPI_MISO_GPIO_Port, ADC_SPI_MISO_Pin,
                         ADC_SPI_SCK_GPIO_Port, ADC_SPI_SCK_Pin, 1.0f / (6.8948 * .0005),
                         (1 / (6.8948 * .0005)) * -0.00325f);
@@ -55,6 +55,7 @@ ControlPanel controls(&sw_start_pin, &sw_stop_pin, &sw_vol_up_pin, &sw_vol_dn_pi
                       &led_power_pin, &led_fault_pin, &led_in_pin, &led_out_pin, &vol_char_1_pin, &vol_char_2_pin,
                       &vol_char_3_pin, &rate_char_1_pin, &rate_char_2_pin, &rate_char_3_pin, &htim1, TIM_CHANNEL_1);
 
+UI_V1 ui(&controls);
 LC064 eeprom(&hi2c1, 0);
 
 RecordStore record_store(&eeprom);
@@ -134,15 +135,6 @@ uint32_t debounce_intvl = 10;
 
 extern "C" void abvm_update() {
     controls.update();
-    if (!HAL_GPIO_ReadPin(MEASURE_12V_GPIO_Port, MEASURE_12V_Pin)) {
-        controls.set_buzzer_volume(1);
-        controls.set_buzzer_tone(ControlPanel::BUZZER_C7);
-        controls.sound_buzzer(true);
-    } else {
-        controls.set_buzzer_volume(1);
-        controls.set_buzzer_tone(ControlPanel::BUZZER_C7);
-        controls.sound_buzzer(false);
-    }
 
     if (millis() > last_motor + motor_interval) {
         motor.update();
@@ -158,7 +150,7 @@ extern "C" void abvm_update() {
                 motor.set_pos_deg(0);
                 motor_driver.set_pwm(0);
                 vent.reset();
-                vent.start();
+                vent.stop();
                 vent.update();
             }
         } else {
@@ -190,33 +182,62 @@ extern "C" void abvm_update() {
         last = millis();
     }
 
-    if (controls.button_update(ControlPanel::START_MODE_BTN).state == Button::State::PRESSED) {
-        vent.is_operational = true;
-        controls.set_status_led(ControlPanel::STATUS_LED_2, true);
-    }
+    ui.set_value(IUI::DisplayValue::TIDAL_VOLUME, vent.get_tv_idx());
+    ui.set_value(IUI::DisplayValue::RESPIRATORY_RATE, vent.get_rate_idx());
 
-    if (controls.button_update(ControlPanel::STOP_BTN).state == Button::State::PRESSED) {
-        vent.stop();
-        controls.set_status_led(ControlPanel::STATUS_LED_2, false);
-    }
+    ui.set_value(IUI::DisplayValue::PEAK_PRESSURE, psi_to_cmH2O(pressure_sensor.read()));
 
-    if (controls.button_update(ControlPanel::UP_LEFT_BTN).state == Button::State::PRESSED) {
-        vent.bump_tv(1);
-        controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_LEFT, vent.get_tv_idx() + 1);
-    }
+    static bool mode = false;
+    switch (ui.update()) {
+        case IUI::Event::START:
+            if (home.is_done()) {
+                controls.set_buzzer_tone(ControlPanel::BUZZER_C7);
+                controls.set_buzzer_volume(0.8);
+                controls.sound_buzzer(true);
+                HAL_Delay(50);
+                controls.set_buzzer_tone(ControlPanel::BUZZER_G7);
+                HAL_Delay(50);
+                controls.set_buzzer_tone(ControlPanel::BUZZER_E7);
+                HAL_Delay(50);
+                controls.set_buzzer_tone(ControlPanel::BUZZER_C8);
+                HAL_Delay(50);
+                controls.sound_buzzer(false);
+                vent.start();
+                vent.is_operational = true;
+                controls.set_status_led(ControlPanel::STATUS_LED_2, true);
+            }
+            break;
+        case IUI::Event::STOP:
+            vent.stop();
+            controls.set_status_led(ControlPanel::STATUS_LED_2, false);
+            break;
+        case IUI::Event::CHANGE_MENU:
+            ui.toggle_view();
+            break;
+        case IUI::Event::TIDAL_VOLUME_UP:
+            vent.bump_tv(1);
+            controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_LEFT, vent.get_tv_idx() + 1);
+            break;
+        case IUI::Event::TIDAL_VOLUME_DOWN:
+            vent.bump_tv(-1);
+            controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_LEFT, vent.get_tv_idx() + 1);
+            break;
+        case IUI::Event::RESPIRATORY_RATE_UP:
+            vent.bump_rate(1);
+            break;
+        case IUI::Event::RESPIRATORY_RATE_DOWN:
+            vent.bump_rate(-1);
+            break;
+        case IUI::Event::SILENCE_ALARM:
+            controls.set_status_led(ControlPanel::STATUS_LED_3, true);
+            controls.sound_buzzer(true);
+            controls.set_buzzer_volume(.1);
+            break;
 
-    if (controls.button_update(ControlPanel::DN_LEFT_BTN).state == Button::State::PRESSED) {
-        vent.bump_tv(-1);
-        controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_LEFT, vent.get_tv_idx() + 1);
-    }
-
-    if (controls.button_update(ControlPanel::UP_RIGHT_BTN).state == Button::State::PRESSED) {
-        vent.bump_rate(1);
-        controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_RIGHT, vent.get_rate_idx() + 1);
-    }
-
-    if (controls.button_update(ControlPanel::DN_RIGHT_BTN).state == Button::State::PRESSED) {
-        vent.bump_rate(-1);
-        controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_RIGHT, vent.get_rate_idx() + 1);
+        case IUI::Event::GO_TO_BOOTLOADER:
+            // controls.set_status_led(ControlPanel::STATUS_LED_2, true);
+            break;
+        default:
+            break;
     }
 }
