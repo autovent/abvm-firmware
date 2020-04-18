@@ -4,11 +4,21 @@
 
 #include "clock.h"
 #include "control_panel.h"
-#include "ui/iui.h"
 #include "math/dsp.h"
+#include "ui/iui.h"
 
 class UI_V1 : public IUI {
 public:
+    enum class View { ADJUST, PRESSURE };
+    enum class AudioAlert {
+        DONE_HOMING,
+        STARTING,
+        STOPING,
+        ALARM_1,
+        ALARM_2,
+        ALARM_3,
+    };
+
     UI_V1(ControlPanel *controls) : controls(controls), button_events{} {
         button_events[ControlPanel::START_MODE_BTN].hold_time_ms = 600;
         button_events[ControlPanel::STOP_BTN].hold_time_ms = 6000;
@@ -19,14 +29,58 @@ public:
         set_view(View::ADJUST);
     }
 
+    void set_audio_alert(AudioAlert alert) {
+        current_alert = alert;
+        audio_alert_in_progress = true;
+        audio_alert_start_time_ms = millis();
+    }
+
     Event update() {
         // Handle Buzzer Noises
+        if (audio_alert_in_progress) {
+            if (current_alert == AudioAlert::STARTING) {
+                uint32_t time_elapsed = time_since_ms(audio_alert_start_time_ms);
+                controls->set_buzzer_volume(0.8);
+                controls->sound_buzzer(true);
+                if (time_elapsed < 100) {
+                    controls->set_buzzer_tone(ControlPanel::BUZZER_C7);
+                } else if (time_elapsed < 200) {
+                    controls->set_buzzer_tone(ControlPanel::BUZZER_G7);
+                } else if (time_elapsed < 300) {
+                    controls->set_buzzer_tone(ControlPanel::BUZZER_E7);
+                } else if (time_elapsed < 400) {
+                    controls->set_buzzer_tone(ControlPanel::BUZZER_C8);
+                } else {
+                    controls->sound_buzzer(false);
 
-        
+                    audio_alert_start_time_ms = 0;
+                    audio_alert_in_progress = false;
+                }
+            } else if (current_alert == AudioAlert::DONE_HOMING) {
+                uint32_t time_elapsed = time_since_ms(audio_alert_start_time_ms);
+                controls->set_buzzer_volume(0.8);
+                controls->sound_buzzer(true);
+                if (time_elapsed < 100) {
+                    controls->set_buzzer_tone(ControlPanel::BUZZER_C7);
+                } else if (time_elapsed < 200) {
+                    controls->set_buzzer_tone(ControlPanel::BUZZER_G7);
+                } else if (time_elapsed < 300) {
+                    controls->set_buzzer_tone(ControlPanel::BUZZER_C7);
+                } else  {
+                    controls->sound_buzzer(false);
+
+                    audio_alert_start_time_ms = 0;
+                    audio_alert_in_progress = false;
+                }
+            }
+        }
+
         // Set LED Values for Bars
         if (view == View::ADJUST) {
-            controls->set_led_bar_graph(ControlPanel::BAR_GRAPH_LEFT, display_values[(uint32_t)DisplayValue::TIDAL_VOLUME] + 1);
-            controls->set_led_bar_graph(ControlPanel::BAR_GRAPH_RIGHT, display_values[(uint32_t)DisplayValue::RESPIRATORY_RATE] + 1);
+            controls->set_led_bar_graph(ControlPanel::BAR_GRAPH_LEFT,
+                                        display_values[(uint32_t)DisplayValue::TIDAL_VOLUME] + 1);
+            controls->set_led_bar_graph(ControlPanel::BAR_GRAPH_RIGHT,
+                                        display_values[(uint32_t)DisplayValue::RESPIRATORY_RATE] + 1);
         } else {
             float peak_pressure = display_values[(uint32_t)DisplayValue::PEAK_PRESSURE];
             controls->set_led_bar_graph(ControlPanel::BAR_GRAPH_LEFT, map<float>(peak_pressure, 0, 50, 0, 6));
@@ -113,18 +167,18 @@ public:
 
     void set_view(View v) {
         view = v;
-        
+
         if (view == View::ADJUST) {
             controls->set_status_led(ControlPanel::STATUS_LED_1, true);
             controls->set_status_led(ControlPanel::STATUS_LED_4, false);
-        } else if (view ==  View::PRESSURE)  {
+        } else if (view == View::PRESSURE) {
             controls->set_status_led(ControlPanel::STATUS_LED_1, false);
             controls->set_status_led(ControlPanel::STATUS_LED_4, true);
         }
     }
 
     void toggle_view() {
-        View  next_view;
+        View next_view;
         if (view == View::ADJUST) {
             next_view = View::PRESSURE;
         } else {
@@ -185,6 +239,10 @@ private:
     uint32_t bootloader_time_ms = 5000;
     bool disallow_start = false;
     View view;
+
+    AudioAlert current_alert;
+    bool audio_alert_in_progress;
+    uint32_t audio_alert_start_time_ms;
 
     float display_values[kNumDisplayValues];
 

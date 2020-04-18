@@ -147,6 +147,7 @@ extern "C" void abvm_update() {
         if (!home.is_done()) {
             home.update();
             if (home.is_done()) {
+                ui.set_audio_alert(UI_V1::AudioAlert::DONE_HOMING);
                 motor.set_pos_deg(0);
                 motor_driver.set_pwm(0);
                 vent.reset();
@@ -184,24 +185,12 @@ extern "C" void abvm_update() {
 
     ui.set_value(IUI::DisplayValue::TIDAL_VOLUME, vent.get_tv_idx());
     ui.set_value(IUI::DisplayValue::RESPIRATORY_RATE, vent.get_rate_idx());
-
     ui.set_value(IUI::DisplayValue::PEAK_PRESSURE, psi_to_cmH2O(pressure_sensor.read()));
 
-    static bool mode = false;
     switch (ui.update()) {
         case IUI::Event::START:
-            if (home.is_done()) {
-                controls.set_buzzer_tone(ControlPanel::BUZZER_C7);
-                controls.set_buzzer_volume(0.8);
-                controls.sound_buzzer(true);
-                HAL_Delay(50);
-                controls.set_buzzer_tone(ControlPanel::BUZZER_G7);
-                HAL_Delay(50);
-                controls.set_buzzer_tone(ControlPanel::BUZZER_E7);
-                HAL_Delay(50);
-                controls.set_buzzer_tone(ControlPanel::BUZZER_C8);
-                HAL_Delay(50);
-                controls.sound_buzzer(false);
+            if (home.is_done() && !vent.is_running()) {
+                ui.set_audio_alert(UI_V1::AudioAlert::STARTING);
                 vent.start();
                 controls.set_status_led(ControlPanel::STATUS_LED_2, true);
             }
