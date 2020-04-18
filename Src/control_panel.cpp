@@ -10,9 +10,9 @@ ControlPanel::ControlPanel(Pin *sw_start, Pin *sw_stop, Pin *sw_up_left, Pin *sw
                            Pin *led_bar_right_char1, Pin *led_bar_right_char2, Pin *led_bar_right_char3,
                            // BUZZER
                            TIM_HandleTypeDef *buzzer_timer, uint32_t buzzer_timer_channel, uint32_t debounce_time_ms)
-    : buttons{{sw_start, debounce_time_ms, true},    {sw_stop, debounce_time_ms, true},
-              {sw_up_left, debounce_time_ms, true},  {sw_dn_left, debounce_time_ms, true},
-              {sw_up_right, debounce_time_ms, true}, {sw_dn_right, debounce_time_ms, true}},
+    : buttons{Button(sw_start, debounce_time_ms, true),    Button(sw_stop, debounce_time_ms, true),
+              Button(sw_up_left, debounce_time_ms, true),  Button(sw_dn_left, debounce_time_ms, true),
+              Button(sw_up_right, debounce_time_ms, true), Button(sw_dn_right, debounce_time_ms, true)},
       led_status{led_status1, led_status2, led_status3, led_status4},
       led_bar_left{led_bar_left_char1, led_bar_left_char2, led_bar_left_char3},
       led_bar_right{led_bar_right_char1, led_bar_right_char2, led_bar_right_char3},
@@ -183,4 +183,9 @@ void ControlPanel::charlieplex(Pin *ios[3], int value) {
             ios[i]->write(out[i]);
         }
     }
+}
+
+Button *ControlPanel::get_buttons(size_t i) {
+    assert(i >= 0 && i < num_buttons());
+    return &buttons[i];
 }
