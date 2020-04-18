@@ -2,7 +2,7 @@
 
 // TODO: Add max current limit
 HomingController::HomingController(Servo *motor, Pin *home)
-    : motor(motor), state(State::IDLE), home_switch(home), homing_velocity(-.2) {}
+    : motor(motor), state(State::IDLE), home_switch(home), homing_velocity(-.6) {}
 
 void HomingController::start() {
     state = State::HOMING;
