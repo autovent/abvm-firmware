@@ -199,6 +199,7 @@ extern "C" void abvm_update() {
             break;
         case IUI::Event::STOP:
             vent.stop();
+            ui.set_audio_alert(UI_V1::AudioAlert::STOPING);
             controls.set_status_led(ControlPanel::STATUS_LED_2, false);
             break;
         case IUI::Event::CHANGE_MENU:
