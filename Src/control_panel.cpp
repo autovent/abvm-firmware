@@ -21,10 +21,10 @@ ControlPanel::ControlPanel(Pin *sw_start, Pin *sw_stop, Pin *sw_up_left, Pin *sw
       buzzer_timer(buzzer_timer),
       buzzer_timer_channel(buzzer_timer_channel) {}
 
-Button::Event ControlPanel::button_update(PanelButton btn) {
-    assert(btn >= 0 && btn < NUM_PANEL_BUTTONS);
-
-    return buttons[btn].update();
+void ControlPanel::button_update() {
+    for (size_t i = 0; i < num_buttons(); i++) {
+        buttons[i].update();
+    }
 }
 
 void ControlPanel::set_status_led(StatusLed led, bool val) {
@@ -186,7 +186,12 @@ void ControlPanel::charlieplex(Pin *ios[3], int value) {
     }
 }
 
-Button *ControlPanel::get_buttons(size_t i) {
+Button const &ControlPanel::get_button(PanelButton i) const {
+    assert(i >= 0 && i < num_buttons());
+    return buttons[i];
+}
+
+Button *ControlPanel::get_button_ptr(PanelButton i) {
     assert(i >= 0 && i < num_buttons());
     return &buttons[i];
 }
