@@ -143,6 +143,7 @@ extern "C" void abvm_update() {
 
     if (millis() > last_motion + 10) {
         pressure_sensor.update();
+        float pressure = psi_to_cmH2O(pressure_sensor.read());
 
         if (!home.is_done()) {
             home.update();
@@ -152,10 +153,10 @@ extern "C" void abvm_update() {
                 motor_driver.set_pwm(0);
                 vent.reset();
                 vent.stop();
-                vent.update();
+                vent.update(pressure);
             }
         } else {
-            vent.update();
+            vent.update(pressure);
         }
 
         last_motion = millis();
@@ -185,8 +186,8 @@ extern "C" void abvm_update() {
 
     ui.set_value(IUI::DisplayValue::TIDAL_VOLUME, vent.get_tv_idx());
     ui.set_value(IUI::DisplayValue::RESPIRATORY_RATE, vent.get_rate_idx());
-    ui.set_value(IUI::DisplayValue::PEAK_PRESSURE, psi_to_cmH2O(pressure_sensor.read()));
-
+    ui.set_value(IUI::DisplayValue::PEAK_PRESSURE, vent.get_peak_pressure_cmH2O());
+    ui.set_value(IUI::DisplayValue::PLATEAU_PRESSURE, vent.get_plateau_pressure_cmH2O());
     switch (ui.update()) {
         case IUI::Event::START:
             if (home.is_done() && !vent.is_running()) {
