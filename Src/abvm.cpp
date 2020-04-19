@@ -188,6 +188,7 @@ extern "C" void abvm_update() {
     ui.set_value(IUI::DisplayValue::RESPIRATORY_RATE, vent.get_rate_idx());
     ui.set_value(IUI::DisplayValue::PEAK_PRESSURE, vent.get_peak_pressure_cmH2O());
     ui.set_value(IUI::DisplayValue::PLATEAU_PRESSURE, vent.get_plateau_pressure_cmH2O());
+
     switch (ui.update()) {
         case IUI::Event::START:
             if (home.is_done() && !vent.is_running()) {
@@ -205,11 +206,9 @@ extern "C" void abvm_update() {
             break;
         case IUI::Event::TIDAL_VOLUME_UP:
             vent.bump_tv(1);
-            controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_LEFT, vent.get_tv_idx() + 1);
             break;
         case IUI::Event::TIDAL_VOLUME_DOWN:
             vent.bump_tv(-1);
-            controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_LEFT, vent.get_tv_idx() + 1);
             break;
         case IUI::Event::RESPIRATORY_RATE_UP:
             vent.bump_rate(1);
@@ -217,14 +216,13 @@ extern "C" void abvm_update() {
         case IUI::Event::RESPIRATORY_RATE_DOWN:
             vent.bump_rate(-1);
             break;
+
         case IUI::Event::SILENCE_ALARM:
-            controls.set_status_led(ControlPanel::STATUS_LED_3, true);
-            controls.sound_buzzer(true);
-            controls.set_buzzer_volume(.1);
+            // TODO: Fill in this implementation
             break;
 
         case IUI::Event::GO_TO_BOOTLOADER:
-            // controls.set_status_led(ControlPanel::STATUS_LED_2, true);
+            // TODO: Fill in this implementation
             break;
         default:
             break;
