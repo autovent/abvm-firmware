@@ -65,7 +65,7 @@ public:
                     controls->set_buzzer_tone(ControlPanel::BUZZER_G7);
                 } else if (time_elapsed < 300) {
                     controls->set_buzzer_tone(ControlPanel::BUZZER_C7);
-                } else  {
+                } else {
                     controls->sound_buzzer(false);
 
                     audio_alert_start_time_ms = 0;
@@ -88,8 +88,12 @@ public:
         } else {
             float peak_pressure = display_values[(uint32_t)DisplayValue::PEAK_PRESSURE];
             float plateau_pressure = display_values[(uint32_t)DisplayValue::PLATEAU_PRESSURE];
-            controls->set_led_bar_graph(ControlPanel::BAR_GRAPH_RIGHT, map<float>(peak_pressure, 25, 50, 1, 6));
-            controls->set_led_bar_graph(ControlPanel::BAR_GRAPH_LEFT, map<float>(plateau_pressure, 15, 40, 1, 6));
+            controls->set_led_bar_graph(
+                  ControlPanel::BAR_GRAPH_RIGHT,
+                  map<float>(peak_pressure, kPeakPressureDisplayMin, kPeakPressureDisplayMax, 1, 6));
+            controls->set_led_bar_graph(
+                  ControlPanel::BAR_GRAPH_LEFT,
+                  map<float>(plateau_pressure, kPlateauPressureDisplayMin, kPlateauPressureDisplayMax, 1, 6));
         }
 
         // Gather all button events
@@ -237,6 +241,11 @@ private:
             }
         }
     };
+
+    static constexpr float kPeakPressureDisplayMin = 25;
+    static constexpr float kPeakPressureDisplayMax = 50;
+    static constexpr float kPlateauPressureDisplayMin = 15;
+    static constexpr float kPlateauPressureDisplayMax = 40;
 
     ControlPanel *controls;
     UIButtonEvent button_events[ControlPanel::num_buttons()];
