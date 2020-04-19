@@ -1,10 +1,9 @@
 #pragma once
 
+#include <stdint.h>
+
 #include "clock.h"
 #include "drivers/pin.h"
-
-#include <stdint.h>
-#include <assert.h>
 
 class Button {
 public:
@@ -13,70 +12,56 @@ public:
         DEBOUNCING,
         PRESSED,
         HOLDING,
+        LONG_PRESS,
         RELEASED,
     };
 
-    struct Event {
-        State state;
-        uint32_t held_time_ms;
-    };
+    Button(Pin *p, uint32_t debounce_time_ms = 10, bool active_low = false);
 
-    Button(Pin *p, uint32_t debounce_time_ms = 10, bool active_low = false)
-        : pin(p),
-          active_low(active_low),
-          debounce_time_ms(debounce_time_ms),
-          state(State::UNPRESSED),
-          pressed_time_ms(0) {}
+    State update();
 
-    Event update() {
-        switch (state) {
-            case State::UNPRESSED:
-                if (read_pin()) {
-                    pressed_time_ms = millis();
-                    state = State::DEBOUNCING;
-                }
-                break;
-            case State::DEBOUNCING:
-                if (!read_pin()) {
-                    state = State::UNPRESSED;
-                } else if (elapsed_time_ms() >= debounce_time_ms) {
-                    state = State::PRESSED;
-                }
-                break;
-            case State::PRESSED:
-                if (!read_pin()) {
-                    state = State::RELEASED;
-                } else {
-                    state = State::HOLDING;
-                }
-                break;
-            case State::HOLDING:
-                if (!read_pin()) {
-                    state = State::RELEASED;
-                }
-                break;
-            case State::RELEASED:
-                state = State::UNPRESSED;
-                break;
-            default:
-                assert(false);  // This should never happen
-                break;
-        }
-
-        uint32_t held_time = (state == State::UNPRESSED) ? 0 : elapsed_time_ms();
-        return {state, held_time};
-    }
-
-    inline uint32_t time_pressed_ms() {
+    inline uint32_t time_pressed_ms() const {
         return pressed_time_ms;
     }
 
-    inline uint32_t elapsed_time_ms() {
+    inline uint32_t elapsed_time_ms() const {
         return time_since_ms(pressed_time_ms);
     }
 
-    inline bool read_pin() {
+    inline bool read_pin() const {
         return pin->read() ^ active_low;
+    }
+
+    inline bool is_pressed() const {
+        return state == Button::State::PRESSED;
+    }
+
+    inline bool is_unpressed() const {
+        return state == Button::State::UNPRESSED || state == Button::State::DEBOUNCING;
+    }
+
+    inline bool is_released() const {
+        return state == Button::State::RELEASED;
+    }
+
+    inline bool is_holding() const {
+        return state == Button::State::HOLDING || state == State::LONG_PRESS;
+    }
+
+    inline bool is_long_press() const {
+        return state == State::LONG_PRESS;
+    }
+
+    inline bool is_long_press_triggered() const {
+        return long_press_triggered;
+    }
+
+    inline bool held_for_more_than(uint32_t time_ms) const {
+        return (state != Button::State::UNPRESSED) && (elapsed_time_ms() >= time_ms);
+    }
+
+    inline void set_long_press_time_ms(uint32_t time_ms) {
+        long_press_time_ms = time_ms;
     }
 
 private:
@@ -84,8 +69,10 @@ private:
     Pin *pin;
     bool active_low;
     uint32_t debounce_time_ms;
+    uint32_t long_press_time_ms;
 
     // state variables
     State state;
     uint32_t pressed_time_ms;
+    bool long_press_triggered;
 };

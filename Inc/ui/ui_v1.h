@@ -19,9 +19,9 @@ public:
         ALARM_3,
     };
 
-    UI_V1(ControlPanel *controls) : controls(controls), button_events{} {
-        button_events[ControlPanel::START_MODE_BTN].hold_time_ms = 600;
-        button_events[ControlPanel::STOP_BTN].hold_time_ms = 6000;
+    UI_V1(ControlPanel *controls) : controls(controls) {
+        controls->get_button_ptr(ControlPanel::START_MODE_BTN)->set_long_press_time_ms(600);
+        controls->get_button_ptr(ControlPanel::STOP_BTN)->set_long_press_time_ms(6000);
     }
     virtual ~UI_V1() = default;
 
@@ -96,11 +96,7 @@ public:
                   map<float>(plateau_pressure, kPlateauPressureDisplayMin, kPlateauPressureDisplayMax, 1, 6));
         }
 
-        // Gather all button events
-        for (size_t i = 0; i < controls->num_buttons(); i++) {
-            button_events[i].event = controls->get_buttons(i)->update();
-            button_events[i].update();
-        }
+        controls->button_update();
 
         Event result = Event::NONE;
 
@@ -115,16 +111,16 @@ public:
         //    - SILENCE_ALARM
 
         // Prevent start from being trigged by an attempt at bootloader enter mode, but clear if start is  released
-        if (!button_events[ControlPanel::STOP_BTN].is_unpressed()) {
+        if (!controls->get_button(ControlPanel::STOP_BTN).is_unpressed()) {
             disallow_start = true;
         }
 
-        if (button_events[ControlPanel::START_MODE_BTN].is_unpressed()) {
+        if (controls->get_button(ControlPanel::START_MODE_BTN).is_unpressed()) {
             disallow_start = false;
         }
 
-        if (button_events[ControlPanel::STOP_BTN].is_unpressed() ||
-            button_events[ControlPanel::START_MODE_BTN].is_unpressed()) {
+        if (controls->get_button(ControlPanel::STOP_BTN).is_unpressed() ||
+            controls->get_button(ControlPanel::START_MODE_BTN).is_unpressed()) {
             is_bootloader_issued = false;
         }
 
@@ -132,40 +128,40 @@ public:
             result = Event::GO_TO_BOOTLOADER;
         }
 
-        if (!is_bootloader_issued && button_events[ControlPanel::START_MODE_BTN].is_unpressed() &&
-            button_events[ControlPanel::STOP_BTN].is_hold_event()) {
+        if (!is_bootloader_issued && controls->get_button(ControlPanel::START_MODE_BTN).is_unpressed() &&
+            controls->get_button(ControlPanel::STOP_BTN).is_long_press()) {
             result = Event::SILENCE_ALARM;
         }
 
         if (view == View::ADJUST) {
-            if (button_events[ControlPanel::DN_RIGHT_BTN].is_pressed()) {
+            if (controls->get_button(ControlPanel::DN_RIGHT_BTN).is_pressed()) {
                 result = Event::RESPIRATORY_RATE_DOWN;
             }
 
-            if (button_events[ControlPanel::UP_RIGHT_BTN].is_pressed()) {
+            if (controls->get_button(ControlPanel::UP_RIGHT_BTN).is_pressed()) {
                 result = Event::RESPIRATORY_RATE_UP;
             }
 
-            if (button_events[ControlPanel::DN_LEFT_BTN].is_pressed()) {
+            if (controls->get_button(ControlPanel::DN_LEFT_BTN).is_pressed()) {
                 result = Event::TIDAL_VOLUME_DOWN;
             }
 
-            if (button_events[ControlPanel::UP_LEFT_BTN].is_pressed()) {
+            if (controls->get_button(ControlPanel::UP_LEFT_BTN).is_pressed()) {
                 result = Event::TIDAL_VOLUME_UP;
             }
         } else {
             // Pressure Mode button actions
         }
-        if (button_events[ControlPanel::STOP_BTN].is_pressed()) {
+        if (controls->get_button(ControlPanel::STOP_BTN).is_pressed()) {
             disallow_start = true;
             result = Event::STOP;
         }
 
-        if (!disallow_start && button_events[ControlPanel::START_MODE_BTN].is_released()) {
-            if (!button_events[ControlPanel::START_MODE_BTN].is_held_triggered) {
+        if (!disallow_start && controls->get_button(ControlPanel::START_MODE_BTN).is_released()) {
+            if (!controls->get_button(ControlPanel::START_MODE_BTN).is_long_press_triggered()) {
                 result = Event::CHANGE_MENU;
             }
-        } else if (!disallow_start && (button_events[ControlPanel::START_MODE_BTN].is_hold_event())) {
+        } else if (!disallow_start && (controls->get_button(ControlPanel::START_MODE_BTN).is_long_press())) {
             result = Event::START;
         }
 
@@ -204,51 +200,12 @@ public:
     void set_alarm(Alarm a) {}
 
 private:
-    // TODO(cw): Should some of this be wrapped  back into Button::Event? I think so.
-    struct UIButtonEvent {
-        Button::Event event;
-        uint32_t hold_time_ms;
-        bool is_held_triggered;
-
-        bool is_pressed() {
-            return event.state == Button::State::PRESSED;
-        }
-
-        bool is_unpressed() {
-            return event.state == Button::State::UNPRESSED || event.state == Button::State::DEBOUNCING;
-        }
-
-        bool is_released() {
-            return event.state == Button::State::RELEASED;
-        }
-
-        bool is_hold_event() {
-            if (!is_held_triggered && (event.state == Button::State::HOLDING) && (event.held_time_ms >= hold_time_ms)) {
-                is_held_triggered = true;
-                return true;
-            } else {
-                return false;
-            }
-        }
-
-        bool is_holding() {
-            return event.state == Button::State::HOLDING;
-        }
-
-        void update() {
-            if (event.state == Button::State::UNPRESSED) {
-                is_held_triggered = false;
-            }
-        }
-    };
-
     static constexpr float kPeakPressureDisplayMin = 25;
     static constexpr float kPeakPressureDisplayMax = 50;
     static constexpr float kPlateauPressureDisplayMin = 15;
     static constexpr float kPlateauPressureDisplayMax = 40;
 
     ControlPanel *controls;
-    UIButtonEvent button_events[ControlPanel::num_buttons()];
     bool is_bootloader_issued = false;
     uint32_t bootloader_time_ms = 5000;
     bool disallow_start = false;
@@ -261,10 +218,8 @@ private:
     float display_values[kNumDisplayValues];
 
     bool is_bootloader_event() {
-        bool ret = (button_events[ControlPanel::STOP_BTN].is_holding() &&
-                    button_events[ControlPanel::STOP_BTN].event.held_time_ms > bootloader_time_ms) &&
-                   (button_events[ControlPanel::START_MODE_BTN].is_holding() &&
-                    button_events[ControlPanel::START_MODE_BTN].event.held_time_ms > bootloader_time_ms);
+        bool ret = (controls->get_button(ControlPanel::STOP_BTN).held_for_more_than(bootloader_time_ms)) &&
+                   (controls->get_button(ControlPanel::START_MODE_BTN).held_for_more_than(bootloader_time_ms));
         if (ret && !is_bootloader_issued) {
             is_bootloader_issued = true;
             return ret;

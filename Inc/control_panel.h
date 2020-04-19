@@ -54,11 +54,13 @@ public:
         int current;
     };
 
-    Button::Event button_update(PanelButton btn);
+
+    void button_update(void);
     static constexpr size_t num_buttons() {
         return static_cast<size_t>(PanelButton::NUM_PANEL_BUTTONS);
     }
-    Button *get_buttons(size_t i);
+    Button const &get_button(PanelButton i) const;
+    Button *get_button_ptr(PanelButton i);
 
     void set_status_led(StatusLed led, bool val);
     void set_led_bar_graph(BarGraph bar, uint8_t level);
