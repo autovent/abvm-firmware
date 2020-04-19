@@ -35,8 +35,7 @@ public:
         audio_alert_start_time_ms = millis();
     }
 
-    Event update() {
-        // Handle Buzzer Noises
+    void handle_buzzer() {
         if (audio_alert_in_progress) {
             if (current_alert == AudioAlert::STARTING) {
                 uint32_t time_elapsed = time_since_ms(audio_alert_start_time_ms);
@@ -74,6 +73,11 @@ public:
                 }
             }
         }
+    }
+
+    Event update() {
+        // Handle Buzzer Noises
+        handle_buzzer();
 
         // Set LED Values for Bars
         if (view == View::ADJUST) {
@@ -83,8 +87,9 @@ public:
                                         display_values[(uint32_t)DisplayValue::RESPIRATORY_RATE] + 1);
         } else {
             float peak_pressure = display_values[(uint32_t)DisplayValue::PEAK_PRESSURE];
-            controls->set_led_bar_graph(ControlPanel::BAR_GRAPH_LEFT, map<float>(peak_pressure, 0, 50, 0, 6));
-            controls->set_led_bar_graph(ControlPanel::BAR_GRAPH_RIGHT, 0);
+            float plateau_pressure = display_values[(uint32_t)DisplayValue::PLATEAU_PRESSURE];
+            controls->set_led_bar_graph(ControlPanel::BAR_GRAPH_RIGHT, map<float>(peak_pressure, 25, 50, 1, 6));
+            controls->set_led_bar_graph(ControlPanel::BAR_GRAPH_LEFT, map<float>(plateau_pressure, 15, 40, 1, 6));
         }
 
         // Gather all button events
