@@ -49,9 +49,16 @@ public:
         BUZZER_C8,  // 4186Hz (~85dB) (default)
     };
 
+    struct BlinkState {
+        uint32_t time_setting_ms;
+        uint32_t last_change_ms;
+        bool is_on;
+    };
+
     struct BarState {
         int level;
         int current;
+        BlinkState blink;
     };
 
 
@@ -64,6 +71,7 @@ public:
 
     void set_status_led(StatusLed led, bool val);
     void set_led_bar_graph(BarGraph bar, uint8_t level);
+    void set_led_bar_graph_blink(BarGraph bar, uint32_t blink_time);
 
     void set_buzzer_tone(BuzzerTone tone);
     void set_buzzer_volume(float volume);  // volume between 0 and 1
@@ -84,8 +92,7 @@ private:
     Pin *led_status[4];
 
     // CHARLIEPLEXED BAR GRAPH LEDS
-    Pin *led_bar_left[3];
-    Pin *led_bar_right[3];
+    Pin *led_bars[2][3];
 
     // BUZZER
     TIM_HandleTypeDef *buzzer_timer;

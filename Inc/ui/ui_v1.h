@@ -9,11 +9,11 @@
 
 class UI_V1 : public IUI {
 public:
-    enum class View { ADJUST, PRESSURE };
+    enum class View { ADJUST, PRESSURE, PRESSURE_LIMIT_ADJUST};
     enum class AudioAlert {
         DONE_HOMING,
         STARTING,
-        STOPING,
+        STOPPING,
         ALARM_1,
         ALARM_2,
         ALARM_3,
@@ -35,10 +35,6 @@ public:
     void set_alarm(Alarm a);
 
 private:
-    static constexpr float kPeakPressureDisplayMin = 25;
-    static constexpr float kPeakPressureDisplayMax = 50;
-    static constexpr float kPlateauPressureDisplayMin = 15;
-    static constexpr float kPlateauPressureDisplayMax = 40;
 
     ControlPanel *controls;
     bool is_bootloader_issued = false;
@@ -53,4 +49,6 @@ private:
     float display_values[kNumDisplayValues];
 
     bool is_bootloader_event();
+    void enter_pressure_limit_view();
+
 };

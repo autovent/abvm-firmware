@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ui/ui_v1.h"
+#include "config.h"
 
 UI_V1::UI_V1(ControlPanel *controls) : controls(controls) {
     controls->get_button_ptr(ControlPanel::START_MODE_BTN)->set_long_press_time_ms(600);
@@ -49,7 +50,7 @@ void UI_V1::handle_buzzer() {
                 audio_alert_start_time_ms = 0;
                 audio_alert_in_progress = false;
             }
-        } else if (current_alert == AudioAlert::STOPING) {
+        } else if (current_alert == AudioAlert::STOPPING) {
             uint32_t time_elapsed = time_since_ms(audio_alert_start_time_ms);
             controls->set_buzzer_volume(0.8);
             controls->sound_buzzer(true);
@@ -75,20 +76,37 @@ UI_V1::Event UI_V1::update() {
     // Handle Buzzer Noises
     handle_buzzer();
 
-    // Set LED Values for Bars
-    if (view == View::ADJUST) {
-        controls->set_led_bar_graph(ControlPanel::BAR_GRAPH_LEFT,
-                                    display_values[(uint32_t)DisplayValue::TIDAL_VOLUME] + 1);
-        controls->set_led_bar_graph(ControlPanel::BAR_GRAPH_RIGHT,
-                                    display_values[(uint32_t)DisplayValue::RESPIRATORY_RATE] + 1);
-    } else {
-        float peak_pressure = display_values[(uint32_t)DisplayValue::PEAK_PRESSURE];
-        float plateau_pressure = display_values[(uint32_t)DisplayValue::PLATEAU_PRESSURE];
-        controls->set_led_bar_graph(ControlPanel::BAR_GRAPH_RIGHT,
-                                    map<float>(peak_pressure, kPeakPressureDisplayMin, kPeakPressureDisplayMax, 1, 6));
-        controls->set_led_bar_graph(
-              ControlPanel::BAR_GRAPH_LEFT,
-              map<float>(plateau_pressure, kPlateauPressureDisplayMin, kPlateauPressureDisplayMax, 1, 6));
+    switch (view) {
+        case View::ADJUST:
+            controls->set_led_bar_graph(ControlPanel::BAR_GRAPH_LEFT,
+                                        display_values[(uint32_t)DisplayValue::TIDAL_VOLUME] + 1);
+            controls->set_led_bar_graph(ControlPanel::BAR_GRAPH_RIGHT,
+                                        display_values[(uint32_t)DisplayValue::RESPIRATORY_RATE] + 1);
+
+            break;
+        case View::PRESSURE: {
+            float peak_pressure = display_values[(uint32_t)DisplayValue::PEAK_PRESSURE];
+            float plateau_pressure = display_values[(uint32_t)DisplayValue::PLATEAU_PRESSURE];
+            controls->set_led_bar_graph(
+                  ControlPanel::BAR_GRAPH_RIGHT,
+                  map<float>(peak_pressure, kPeakPressureDisplayMin, kPeakPressureDisplayMax, 1, 6));
+            controls->set_led_bar_graph(
+                  ControlPanel::BAR_GRAPH_LEFT,
+                  map<float>(plateau_pressure, kPlateauPressureDisplayMin, kPlateauPressureDisplayMax, 1, 6));
+
+            break;
+        }
+        case View::PRESSURE_LIMIT_ADJUST: {
+            float peak_pressure = display_values[(uint32_t)DisplayValue::PEAK_PRESSURE_ALARM];
+            float plateau_pressure = display_values[(uint32_t)DisplayValue::PLATEAU_PRESSURE];
+            controls->set_led_bar_graph(
+                  ControlPanel::BAR_GRAPH_RIGHT,
+                  map<float>(peak_pressure, kPeakPressureDisplayMin, kPeakPressureDisplayMax, 1, 6));
+            controls->set_led_bar_graph(
+                  ControlPanel::BAR_GRAPH_LEFT,
+                  map<float>(plateau_pressure, kPlateauPressureDisplayMin, kPlateauPressureDisplayMax, 1, 6));
+            break;
+        }
     }
 
     controls->button_update();
@@ -128,25 +146,45 @@ UI_V1::Event UI_V1::update() {
         result = Event::SILENCE_ALARM;
     }
 
-    if (view == View::ADJUST) {
-        if (controls->get_button(ControlPanel::DN_RIGHT_BTN).is_pressed()) {
-            result = Event::RESPIRATORY_RATE_DOWN;
-        }
+    switch (view) {
+        case View::ADJUST:
+            if (controls->get_button(ControlPanel::DN_RIGHT_BTN).is_pressed()) {
+                result = Event::RESPIRATORY_RATE_DOWN;
+            }
 
-        if (controls->get_button(ControlPanel::UP_RIGHT_BTN).is_pressed()) {
-            result = Event::RESPIRATORY_RATE_UP;
-        }
+            if (controls->get_button(ControlPanel::UP_RIGHT_BTN).is_pressed()) {
+                result = Event::RESPIRATORY_RATE_UP;
+            }
 
-        if (controls->get_button(ControlPanel::DN_LEFT_BTN).is_pressed()) {
-            result = Event::TIDAL_VOLUME_DOWN;
-        }
+            if (controls->get_button(ControlPanel::DN_LEFT_BTN).is_pressed()) {
+                result = Event::TIDAL_VOLUME_DOWN;
+            }
 
-        if (controls->get_button(ControlPanel::UP_LEFT_BTN).is_pressed()) {
-            result = Event::TIDAL_VOLUME_UP;
-        }
-    } else {
-        // Pressure Mode button actions
+            if (controls->get_button(ControlPanel::UP_LEFT_BTN).is_pressed()) {
+                result = Event::TIDAL_VOLUME_UP;
+            }
+            break;
+        case View::PRESSURE:
+            // Pressure Mode button actions
+            if (controls->get_button(ControlPanel::DN_RIGHT_BTN).held_for_more_than(600)) {
+                enter_pressure_limit_view();
+            }
+
+            if (controls->get_button(ControlPanel::UP_RIGHT_BTN).held_for_more_than(600)) {
+                enter_pressure_limit_view();
+            }
+            break;
+        case View::PRESSURE_LIMIT_ADJUST:
+            if (controls->get_button(ControlPanel::UP_RIGHT_BTN).is_pressed()) {
+                result = Event::PRESSURE_LIMIT_UP;
+            }
+
+            if (controls->get_button(ControlPanel::DN_RIGHT_BTN).is_pressed()) {
+                result = Event::PRESSURE_LIMIT_DOWN;
+            }
+            break;
     }
+
     if (controls->get_button(ControlPanel::STOP_BTN).is_pressed()) {
         disallow_start = true;
         result = Event::STOP;
@@ -154,7 +192,7 @@ UI_V1::Event UI_V1::update() {
 
     if (!disallow_start && controls->get_button(ControlPanel::START_MODE_BTN).is_released()) {
         if (!controls->get_button(ControlPanel::START_MODE_BTN).is_long_press_triggered()) {
-            result = Event::CHANGE_MENU;
+            toggle_view();
         }
     } else if (!disallow_start && (controls->get_button(ControlPanel::START_MODE_BTN).is_long_press())) {
         result = Event::START;
@@ -169,9 +207,21 @@ void UI_V1::set_view(View v) {
     view = v;
 
     if (view == View::ADJUST) {
+        controls->set_led_bar_graph_blink(ControlPanel::BAR_GRAPH_LEFT, 0);
+        controls->set_led_bar_graph_blink(ControlPanel::BAR_GRAPH_RIGHT, 0);
+
         controls->set_status_led(ControlPanel::STATUS_LED_1, true);
         controls->set_status_led(ControlPanel::STATUS_LED_4, false);
     } else if (view == View::PRESSURE) {
+        controls->set_led_bar_graph_blink(ControlPanel::BAR_GRAPH_LEFT, 0);
+        controls->set_led_bar_graph_blink(ControlPanel::BAR_GRAPH_RIGHT, 0);
+
+        controls->set_status_led(ControlPanel::STATUS_LED_1, false);
+        controls->set_status_led(ControlPanel::STATUS_LED_4, true);
+    } else if (view == View::PRESSURE_LIMIT_ADJUST) {
+        controls->set_led_bar_graph_blink(ControlPanel::BAR_GRAPH_LEFT, 0);
+        controls->set_led_bar_graph_blink(ControlPanel::BAR_GRAPH_RIGHT, 250);
+
         controls->set_status_led(ControlPanel::STATUS_LED_1, false);
         controls->set_status_led(ControlPanel::STATUS_LED_4, true);
     }
@@ -181,9 +231,22 @@ void UI_V1::toggle_view() {
     View next_view;
     if (view == View::ADJUST) {
         next_view = View::PRESSURE;
+    } else if (view == View::PRESSURE_LIMIT_ADJUST) {
+        next_view = View::PRESSURE;
     } else {
         next_view = View::ADJUST;
     }
+
+    set_view(next_view);
+}
+
+void UI_V1::enter_pressure_limit_view() {
+    // Only allow a transition form Pressure to PRESSURE_LIMIT_ADJUST
+    View next_view = view;
+    if (view == View::PRESSURE) {
+        next_view = View::PRESSURE_LIMIT_ADJUST;
+    }
+
     set_view(next_view);
 }
 

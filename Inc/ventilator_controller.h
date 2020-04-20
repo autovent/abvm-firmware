@@ -58,6 +58,13 @@ public:
 
     float get_peak_pressure_cmH2O();
     float get_plateau_pressure_cmH2O();
+    inline float get_peak_pressure_limit_cmH2O() const {
+        return peak_pressure_limit_cmH2O;
+    }
+
+    void increment_peak_pressure_limit_cmH2O(float x) {
+      peak_pressure_limit_cmH2O = saturate(peak_pressure_limit_cmH2O + x, kPeakPressureDisplayMin, kPeakPressureDisplayMax);
+    }
 
 private:
     IMotionPlanner *motion;
@@ -88,4 +95,6 @@ private:
 
     float last_plateau_pressure;
     float current_plateau_pressure;
+
+    float peak_pressure_limit_cmH2O;
 };

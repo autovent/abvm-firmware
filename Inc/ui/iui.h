@@ -11,7 +11,6 @@ public:
     enum class Event {
         NONE = 0,               /// No event to emit
         START,                  /// Start event: HOLD the start button
-        CHANGE_MENU,            /// Change Menu: TAP the change menu
         STOP,                   /// Stop : PRESS  the  stop button
         SILENCE_ALARM,          /// Silence the alarm: PRESS AND HOLD the stop button
         TIDAL_VOLUME_UP,        /// Increment Tidal Volume
