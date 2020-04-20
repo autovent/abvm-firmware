@@ -121,6 +121,7 @@ extern "C" void abvm_init() {
     controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_LEFT, 1);
     controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_RIGHT, 1);
     home.start();
+    ui.init();
 }
 
 uint32_t last = 0;
@@ -188,6 +189,7 @@ extern "C" void abvm_update() {
     ui.set_value(IUI::DisplayValue::RESPIRATORY_RATE, vent.get_rate_idx());
     ui.set_value(IUI::DisplayValue::PEAK_PRESSURE, vent.get_peak_pressure_cmH2O());
     ui.set_value(IUI::DisplayValue::PLATEAU_PRESSURE, vent.get_plateau_pressure_cmH2O());
+    ui.set_value(IUI::DisplayValue::PEAK_PRESSURE_ALARM, vent.get_peak_pressure_limit_cmH2O());
 
     switch (ui.update()) {
         case IUI::Event::START:
@@ -199,11 +201,8 @@ extern "C" void abvm_update() {
             break;
         case IUI::Event::STOP:
             vent.stop();
-            ui.set_audio_alert(UI_V1::AudioAlert::STOPING);
+            ui.set_audio_alert(UI_V1::AudioAlert::STOPPING);
             controls.set_status_led(ControlPanel::STATUS_LED_2, false);
-            break;
-        case IUI::Event::CHANGE_MENU:
-            ui.toggle_view();
             break;
         case IUI::Event::TIDAL_VOLUME_UP:
             vent.bump_tv(1);
@@ -216,6 +215,13 @@ extern "C" void abvm_update() {
             break;
         case IUI::Event::RESPIRATORY_RATE_DOWN:
             vent.bump_rate(-1);
+            break;
+        case IUI::Event::PRESSURE_LIMIT_UP:
+            vent.increment_peak_pressure_limit_cmH2O(kPeakPressureLimitIncrement);
+            break;
+
+        case IUI::Event::PRESSURE_LIMIT_DOWN:
+            vent.increment_peak_pressure_limit_cmH2O(-kPeakPressureLimitIncrement);
             break;
 
         case IUI::Event::SILENCE_ALARM:

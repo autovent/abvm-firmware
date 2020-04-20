@@ -9,7 +9,8 @@ VentilatorController::VentilatorController(IMotionPlanner *motion, Servo *motor)
       next_rate_idx(0),
       next_tv_idx(0),
       tidal_volume_settings{55, 62, 69, 76, 83, 95},
-      rate_settings{8, 10, 12, 14, 16, 18} {}
+      rate_settings{8, 10, 12, 14, 16, 18} ,
+      peak_pressure_limit_cmH2O(kDefaultPeakPressureLimit) {}
 
 void VentilatorController::start() {
     motor->set_pos_deg(0);
@@ -39,7 +40,7 @@ float VentilatorController::update(float pressure_cmH2O) {
         current_plateau_pressure = min(pressure_cmH2O, current_plateau_pressure);
     }
 
-    if (pressure_cmH2O >= kOverPressure_cmH2O && state != State::INSPIRATION) {
+    if (pressure_cmH2O >= peak_pressure_limit_cmH2O && state != State::INSPIRATION) {
         state = State::EXPIRATION;
         motion->force_next({kOpenPosition_deg, 0, kFastOpenTime_ms});
         motor->set_pos_deg(motion->run(motion->get_pos()));

@@ -15,8 +15,8 @@ ControlPanel::ControlPanel(Pin *sw_start, Pin *sw_stop, Pin *sw_up_left, Pin *sw
               Button(sw_up_left, debounce_time_ms, true),  Button(sw_dn_left, debounce_time_ms, true),
               Button(sw_up_right, debounce_time_ms, true), Button(sw_dn_right, debounce_time_ms, true)},
       led_status{led_status1, led_status2, led_status3, led_status4},
-      led_bar_left{led_bar_left_char1, led_bar_left_char2, led_bar_left_char3},
-      led_bar_right{led_bar_right_char1, led_bar_right_char2, led_bar_right_char3},
+      led_bars{{led_bar_left_char1, led_bar_left_char2, led_bar_left_char3},
+               {led_bar_right_char1, led_bar_right_char2, led_bar_right_char3}},
 
       buzzer_timer(buzzer_timer),
       buzzer_timer_channel(buzzer_timer_channel) {}
@@ -30,6 +30,13 @@ void ControlPanel::button_update() {
 void ControlPanel::set_status_led(StatusLed led, bool val) {
     assert(led >= 0 && led < sizeof(led_status));
     led_status[led]->write(val);
+}
+
+void ControlPanel::set_led_bar_graph_blink(BarGraph bar, uint32_t blink_time) {
+    assert(bar == BAR_GRAPH_RIGHT || bar == BAR_GRAPH_LEFT);
+    BarState &bs = bar_states[bar];
+    bs.blink.last_change_ms = millis();
+    bs.blink.time_setting_ms = blink_time;
 }
 
 void ControlPanel::set_led_bar_graph(BarGraph bar, uint8_t level) {
@@ -93,15 +100,23 @@ void ControlPanel::update() {
     if (millis() > last_charlie_update_ms + CHARLIE_UPDATE_INTERVAL_MS) {
         last_charlie_update_ms = millis();
 
-        charlieplex(led_bar_left, bar_states[BAR_GRAPH_LEFT].current++);
-        charlieplex(led_bar_right, bar_states[BAR_GRAPH_RIGHT].current++);
+        for (size_t i = 0; i <= BAR_GRAPH_RIGHT; i++) {
+            if (bar_states[i].blink.time_setting_ms > 0) {
+                if (time_since_ms(bar_states[i].blink.last_change_ms) > bar_states[i].blink.time_setting_ms) {
+                    bar_states[i].blink.last_change_ms = millis();
+                    bar_states[i].blink.is_on = !bar_states[i].blink.is_on;
+                }
 
-        if (bar_states[BAR_GRAPH_LEFT].current > bar_states[BAR_GRAPH_LEFT].level) {
-            bar_states[BAR_GRAPH_LEFT].current = bar_states[BAR_GRAPH_LEFT].level > 0 ? 1 : 0;
-        }
+                if (!bar_states[i].blink.is_on) {
+                    bar_states[i].current = 0;
+                }
+            }
 
-        if (bar_states[BAR_GRAPH_RIGHT].current > bar_states[BAR_GRAPH_RIGHT].level) {
-            bar_states[BAR_GRAPH_RIGHT].current = bar_states[BAR_GRAPH_RIGHT].level > 0 ? 1 : 0;
+            charlieplex(led_bars[i], bar_states[i].current++);
+
+            if (bar_states[i].current > bar_states[i].level) {
+                bar_states[i].current = bar_states[i].level > 0 ? 1 : 0;
+            }
         }
     }
 }
