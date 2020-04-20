@@ -53,6 +53,8 @@ public:
         uint32_t time_setting_ms;
         uint32_t last_change_ms;
         bool is_on;
+
+        bool update();
     };
 
     struct BarState {
@@ -61,6 +63,10 @@ public:
         BlinkState blink;
     };
 
+    struct LedState {
+        bool is_on;
+        BlinkState blink;
+    };
 
     void button_update(void);
     static constexpr size_t num_buttons() {
@@ -70,6 +76,8 @@ public:
     Button *get_button_ptr(PanelButton i);
 
     void set_status_led(StatusLed led, bool val);
+    void set_status_led_blink(StatusLed led, uint32_t blink_time);
+
     void set_led_bar_graph(BarGraph bar, uint8_t level);
     void set_led_bar_graph_blink(BarGraph bar, uint32_t blink_time);
 
@@ -78,7 +86,6 @@ public:
     void sound_buzzer(bool on);
 
     void update();
-
 
 private:
     static constexpr uint32_t CHARLIE_UPDATE_INTERVAL_MS = 1;
@@ -100,8 +107,8 @@ private:
 
     bool prev_panel_button_state[NUM_PANEL_BUTTONS];
 
+    LedState led_blink_states[4];
     BarState bar_states[2];
-
     void charlieplex(Pin *ios[3], int value);
 };
 

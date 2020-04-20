@@ -4,6 +4,7 @@
 
 #include "clock.h"
 #include "math/dsp.h"
+#include "sys/array_helpers.h"
 
 ControlPanel::ControlPanel(Pin *sw_start, Pin *sw_stop, Pin *sw_up_left, Pin *sw_dn_left, Pin *sw_up_right,
                            Pin *sw_dn_right, Pin *led_status1, Pin *led_status2, Pin *led_status3, Pin *led_status4,
@@ -28,9 +29,18 @@ void ControlPanel::button_update() {
 }
 
 void ControlPanel::set_status_led(StatusLed led, bool val) {
-    assert(led >= 0 && led < sizeof(led_status));
-    led_status[led]->write(val);
+    assert(led >= 0 && led < countof(led_status));
+    set_status_led_blink(led, 0);
+    led_blink_states[led].is_on = val;
 }
+
+void ControlPanel::set_status_led_blink(StatusLed led, uint32_t blink_time) {
+    assert(led >= 0 && led < countof(led_status));
+    led_blink_states[led].blink.last_change_ms = millis();
+    led_blink_states[led].blink.time_setting_ms = blink_time;
+}
+
+
 
 void ControlPanel::set_led_bar_graph_blink(BarGraph bar, uint32_t blink_time) {
     assert(bar == BAR_GRAPH_RIGHT || bar == BAR_GRAPH_LEFT);
@@ -96,20 +106,34 @@ void ControlPanel::sound_buzzer(bool on) {
     }
 }
 
+bool ControlPanel::BlinkState::update() {
+    if (time_setting_ms > 0) {
+        if (time_since_ms(last_change_ms) > time_setting_ms) {
+            last_change_ms = millis();
+            is_on = !is_on;
+        }
+    } else {
+        is_on = true;
+    }
+            return is_on;
+
+}
+
 void ControlPanel::update() {
     if (millis() > last_charlie_update_ms + CHARLIE_UPDATE_INTERVAL_MS) {
         last_charlie_update_ms = millis();
 
-        for (size_t i = 0; i <= BAR_GRAPH_RIGHT; i++) {
-            if (bar_states[i].blink.time_setting_ms > 0) {
-                if (time_since_ms(bar_states[i].blink.last_change_ms) > bar_states[i].blink.time_setting_ms) {
-                    bar_states[i].blink.last_change_ms = millis();
-                    bar_states[i].blink.is_on = !bar_states[i].blink.is_on;
-                }
+        for (size_t i = 0; i < countof(led_blink_states); i++) {
+            if (!led_blink_states[i].blink.update()) {
+                led_status[i]->write(false);
+            } else {
+                led_status[i]->write(led_blink_states[i].is_on);
+            }
+        }
 
-                if (!bar_states[i].blink.is_on) {
+        for (size_t i = 0; i <= BAR_GRAPH_RIGHT; i++) {
+            if (!bar_states[i].blink.update()) {
                     bar_states[i].current = 0;
-                }
             }
 
             charlieplex(led_bars[i], bar_states[i].current++);

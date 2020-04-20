@@ -224,6 +224,7 @@ void UI_V1::set_view(View v) {
 
         controls->set_status_led(ControlPanel::STATUS_LED_1, false);
         controls->set_status_led(ControlPanel::STATUS_LED_4, true);
+        controls->set_status_led_blink(ControlPanel::STATUS_LED_4, 250);
     }
 }
 
