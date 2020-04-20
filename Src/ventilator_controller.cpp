@@ -85,9 +85,6 @@ float VentilatorController::update(float pressure_cmH2O) {
                 motion->set_next({tidal_volume_settings[current_tv_idx], 0, kPlateauTime_ms});
                 break;
             case State::EXPIRATION: {
-                last_plateau_pressure = current_plateau_pressure;
-                last_peak_pressure_cmH2O = current_peak_pressure_cmH2O;
-
                 state = State::INSPIRATION;
                 uint32_t plateau_time = is_measure_plateau_cycle ? kPlateauTime_ms : 0;
                 if (is_fast_open) {
@@ -123,5 +120,11 @@ float VentilatorController::get_peak_pressure_cmH2O() {
 }
 
 float VentilatorController::get_plateau_pressure_cmH2O() {
-    return last_plateau_pressure;
+    // If the last plateau pressur is infinity then return 0, this just  means  there is no valid imeasurement of the
+    // plateau pressure yet.
+    if (last_plateau_pressure == INFINITY) {
+        return 0;
+    } else {
+        return last_plateau_pressure;
+    }
 }
