@@ -3,5 +3,6 @@
         "tim.h": "c",
         "stm32f1xx_it.h": "c",
         "stm32f1xx_hal_spi.h": "c"
-    }
+    },
+    "C_Cpp.clang_format_path": "clang-format-9"
 }

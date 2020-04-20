@@ -21,6 +21,8 @@
 #include "usb_comm.h"
 #include "ventilator_controller.h"
 
+#include "oled.h"
+
 ADS1231 pressure_sensor(ADC2_PWRDN_GPIO_Port, ADC2_PWRDN_Pin, &hspi1, ADC_SPI_MISO_GPIO_Port, ADC_SPI_MISO_Pin,
                         ADC_SPI_SCK_GPIO_Port, ADC_SPI_SCK_Pin, 1.0f / (6.8948 * .0005),
                         (1 / (6.8948 * .0005)) * -0.00325f);
@@ -42,6 +44,8 @@ ControlPanel controls(SW_START_GPIO_Port, SW_START_Pin, SW_STOP_GPIO_Port, SW_ST
                       RATE_CHAR_3_GPIO_Port, RATE_CHAR_3_Pin, &htim1, TIM_CHANNEL_1);
 
 LC064 eeprom(&hi2c1, 0);
+
+OLED oled(&hi2c1);
 
 RecordStore record_store(&eeprom);
 void control_panel_self_test() {
@@ -82,7 +86,14 @@ Pin homing_switch{LIMIT2_GPIO_Port, LIMIT2_Pin};
 HomingController home(&motor, &homing_switch);
 
 extern "C" void abvm_init() {
-    BootLoader::set_next_boot(BootLoader::BOOT_SELECT_APP);
+    // BootLoader::set_next_boot(BootLoader::BOOT_SELECT_APP);
+
+    oled.init();
+    oled.set_alarm_value(10);
+    oled.set_alert_contents("Pressure", "too high!");
+    oled.set_overview_contents(12, 17, 400, 6);
+    oled.set_screen(OLED::ALERT);
+    oled.update();
 
     encoder.reset();
     usb_comm.set_as_cdc_consumer();
@@ -120,6 +131,7 @@ uint32_t debounce_intvl = 10;
 
 extern "C" void abvm_update() {
     controls.update();
+    // oled.update();
 
     if (HAL_GetTick() > last_motor + motor_interval) {
         motor.update();
