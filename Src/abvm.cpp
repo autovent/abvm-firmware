@@ -100,8 +100,6 @@ Pin homing_switch{LIMIT2_GPIO_Port, LIMIT2_Pin};
 HomingController home(&motor, &homing_switch);
 
 extern "C" void abvm_init() {
-    BootLoader::set_next_boot(BootLoader::BOOT_SELECT_APP);
-
     encoder.reset();
     usb_comm.set_as_cdc_consumer();
 
@@ -247,8 +245,7 @@ extern "C" void abvm_update() {
 
         case IUI::Event::GO_TO_BOOTLOADER:
             // TODO: Fill in this implementation
-            BootLoader::set_next_boot(BootLoader::BOOT_SELECT_BOOTLOADER);
-            BootLoader::reboot();
+            BootLoader::start_bootloader();
             break;
         default:
             break;
