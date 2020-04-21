@@ -30,8 +30,8 @@ constexpr Servo::Config kRobotZone_638312_16RPM = {515.63, 48};
 
 #if defined(MOTOR_GOBILDA_30RPM)
 constexpr Servo::Config kMotorParams = kGoBilda_YellowJacket_5202_0002_0188_30RPM;
-constexpr PID::Params kMotorVelPidParams = {3, .0, .0};
-constexpr PID::Params kMotorPosPidParams = {15, .1, .0};                         //.02};
+constexpr PID::Params kMotorVelPidParams = {2.8, .0, .0};
+constexpr PID::Params kMotorPosPidParams = {14.5, .1, .0};                         //.02};
 constexpr Range<float> kMotorVelLimits = {-30 * 0.104719755, 30 * 0.104719755};  // RPM to rads/sec
 constexpr Range<float> kMotorPosLimits = {0, deg_to_rad(95)};
 

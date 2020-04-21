@@ -92,8 +92,8 @@ void Servo::update() {
     int16_t counts = next_pos - last_pos;
 
     // TODO: replace with a tested filter library
-    position = 0 * position + 1 * to_rad_at_output(next_pos);
-    velocity = .97 * velocity + .03 * to_rad_at_output(counts) / (period_ms / 1000.0f);  // rad / s <--- Filter this
+    position = .8 * position + .2 * to_rad_at_output(next_pos);
+    velocity = .98 * velocity + .02 * to_rad_at_output(counts) / (period_ms / 1000.0f);  // rad / s <--- Filter this
 
     test_no_encoder_fault(counts);
     // test_wrong_direction();
