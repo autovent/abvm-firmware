@@ -11,6 +11,7 @@ class UI_V1 : public IUI {
 public:
     enum class View { ADJUST, PRESSURE, PRESSURE_LIMIT_ADJUST};
     enum class AudioAlert {
+        NONE,
         DONE_HOMING,
         STARTING,
         STOPPING,
@@ -42,9 +43,11 @@ private:
     bool disallow_start = false;
     View view;
 
+    Alarm alarm_state;
     AudioAlert current_alert;
     bool audio_alert_in_progress;
     uint32_t audio_alert_start_time_ms;
+    uint32_t silence_time_ms;
 
     float display_values[kNumDisplayValues];
 

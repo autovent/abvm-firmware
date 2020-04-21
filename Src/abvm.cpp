@@ -22,9 +22,10 @@
 #include "ui/ui_v1.h"
 #include "usb_comm.h"
 #include "ventilator_controller.h"
-ADS1231 pressure_sensor(ADC2_PWRDN_GPIO_Port, ADC2_PWRDN_Pin, &hspi1, ADC_SPI_MISO_GPIO_Port, ADC_SPI_MISO_Pin,
-                        ADC_SPI_SCK_GPIO_Port, ADC_SPI_SCK_Pin, 1.0f / (6.8948 * .0005),
-                        (1 / (6.8948 * .0005)) * -0.00325f);
+
+ADS1231 pressure_sensor(ADC1_PWRDN_GPIO_Port, ADC1_PWRDN_Pin, &hspi1, ADC_SPI_MISO_GPIO_Port, ADC_SPI_MISO_Pin,
+                        ADC_SPI_SCK_GPIO_Port, ADC_SPI_SCK_Pin, 1.0f / (6.8948 * .00054),
+                        -.09 + (1 / (6.8948 /*kPA/psi*/ * .00054)) * -0.00325f);
 
 DRV8873 motor_driver(MC_SLEEP_GPIO_Port, MC_SLEEP_Pin, MC_DISABLE_GPIO_Port, MC_DISABLE_Pin, MC_FAULT_GPIO_Port,
                      MC_FAULT_Pin, &htim2, TIM_CHANNEL_1, TIM_CHANNEL_3, &hspi2, MC_SPI_CS_GPIO_Port, MC_SPI_CS_Pin,
@@ -92,6 +93,8 @@ TrapezoidalPlanner motion({.5, .5}, 10);
 Servo motor(1, &motor_driver, &encoder, kMotorParams, kMotorVelPidParams, kMotorVelLimits, kMotorPosPidParams,
             kMotorPosLimits);
 
+Pin power_detect{MEASURE_12V_GPIO_Port, MEASURE_12V_Pin};
+
 VentilatorController vent(&motion, &motor);
 Pin homing_switch{LIMIT2_GPIO_Port, LIMIT2_Pin};
 HomingController home(&motor, &homing_switch);
@@ -130,9 +133,6 @@ uint32_t last_motion = 0;
 uint32_t interval = 1000;
 uint32_t motor_interval = 1;
 
-uint32_t stop_pressed = 0;
-uint32_t start_pressed = 0;
-uint32_t debounce_intvl = 10;
 
 extern "C" void abvm_update() {
     controls.update();
@@ -163,7 +163,7 @@ extern "C" void abvm_update() {
         last_motion = millis();
     }
 
-    if (millis() > last + 20) {
+    if (millis() > last + 40) {
         float pressure = pressure_sensor.read();
         static char data[128];
         snprintf(data, sizeof(data),
@@ -177,10 +177,16 @@ extern "C" void abvm_update() {
                  "%1.0f,"
                  "%1.0f,"
                  "%1.0f,"
-                 "%lu\r\n",
+                 "%lu,"
+                 "%1.0f,"
+                 "%1.0f"
+                 "\r\n",
                  msec_to_sec(millis()), psi_to_cmH2O(pressure), motor.velocity, motor.target_velocity, motor.position,
                  motor.target_pos, motor_driver.get_current(), vent.get_rate(), vent.get_closed_pos(),
-                 vent.get_open_pos(), motor.faults.to_int());
+                 vent.get_open_pos(), motor.faults.to_int(),
+                 vent.get_peak_pressure_cmH2O(),
+                 vent.get_plateau_pressure_cmH2O()
+                 );
         usb_comm.send((uint8_t *)data, strlen(data));
         last = millis();
     }
@@ -191,12 +197,22 @@ extern "C" void abvm_update() {
     ui.set_value(IUI::DisplayValue::PLATEAU_PRESSURE, vent.get_plateau_pressure_cmH2O());
     ui.set_value(IUI::DisplayValue::PEAK_PRESSURE_ALARM, vent.get_peak_pressure_limit_cmH2O());
 
+    if (vent.get_peak_pressure_cmH2O() >= vent.get_peak_pressure_limit_cmH2O()) {
+        ui.set_alarm(UI_V1::Alarm::OVERPRESSURE);
+    }
+
+    if (!power_detect.read()) {
+        ui.set_alarm(UI_V1::Alarm::POWER_LOSS);
+    }
+
     switch (ui.update()) {
         case IUI::Event::START:
             if (home.is_done() && !vent.is_running()) {
                 ui.set_audio_alert(UI_V1::AudioAlert::STARTING);
                 vent.start();
                 controls.set_status_led(ControlPanel::STATUS_LED_2, true);
+            } else if (vent.is_running()) {
+                ui.set_alarm(UI_V1::Alarm::SILENCE);
             }
             break;
         case IUI::Event::STOP:
@@ -225,11 +241,14 @@ extern "C" void abvm_update() {
             break;
 
         case IUI::Event::SILENCE_ALARM:
+            ui.set_alarm(UI_V1::Alarm::SILENCE);
             // TODO: Fill in this implementation
             break;
 
         case IUI::Event::GO_TO_BOOTLOADER:
             // TODO: Fill in this implementation
+            BootLoader::set_next_boot(BootLoader::BOOT_SELECT_BOOTLOADER);
+            BootLoader::reboot();
             break;
         default:
             break;
