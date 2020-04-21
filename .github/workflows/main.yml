@@ -21,14 +21,15 @@ jobs:
         run: |
           pip install wheel
           pip install platformio
+      - name: Get the version
+        id: get_version
+        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
 
       - name: Build
         run: |
           pio run
           mkdir abvm-firmware
-          cp .pio/build/abvm-v1-f303-debug/firmware.bin abvm-debug.bin
-          cp .pio/build/abvm-v1-f303-release/firmware.bin abvm-release.bin
-          zip --junk-paths abvm-firmware *.bin
+          cp .pio/build/abvm-v1-f303-release/firmware.bin abvm-release-${{ steps.get_version.outputs.VERSION }}.bin
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -46,6 +47,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-          asset_path: ./abvm-firmware.zip
-          asset_name: abvm-firmware.zip
-          asset_content_type: application/zip
+          asset_path: ./abvm-release-${{ steps.get_version.outputs.VERSION }}.bin
+          asset_name: abvm-release-${{ steps.get_version.outputs.VERSION }}.bin
+          asset_content_type: application/binary
