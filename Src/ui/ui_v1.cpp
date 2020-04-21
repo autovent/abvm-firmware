@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ui/ui_v1.h"
+
 #include "config.h"
 
 UI_V1::UI_V1(ControlPanel *controls) : controls(controls) {
@@ -20,7 +21,13 @@ void UI_V1::set_audio_alert(AudioAlert alert) {
 
 void UI_V1::handle_buzzer() {
     if (audio_alert_in_progress) {
-        if (current_alert == AudioAlert::STARTING) {
+        if (current_alert == AudioAlert::NONE) {
+            controls->sound_buzzer(false);
+
+            audio_alert_start_time_ms = 0;
+            audio_alert_in_progress = false;
+
+        } else if (current_alert == AudioAlert::STARTING) {
             uint32_t time_elapsed = time_since_ms(audio_alert_start_time_ms);
             controls->set_buzzer_volume(0.8);
             controls->sound_buzzer(true);
@@ -68,6 +75,30 @@ void UI_V1::handle_buzzer() {
                 audio_alert_start_time_ms = 0;
                 audio_alert_in_progress = false;
             }
+        } else if (current_alert == AudioAlert::ALARM_1) {
+            controls->set_buzzer_volume(0.8);
+            controls->sound_buzzer(true);
+            uint32_t time_elapsed = time_since_ms(audio_alert_start_time_ms);
+
+            if (time_elapsed < 250) {
+                controls->set_buzzer_tone(ControlPanel::BUZZER_C7);
+            } else if (time_elapsed < 500) {
+                controls->sound_buzzer(false);
+            } else {
+                audio_alert_start_time_ms = millis();
+            }
+        } else if (current_alert == AudioAlert::ALARM_2) {
+            controls->set_buzzer_volume(0.8);
+            controls->sound_buzzer(true);
+            uint32_t time_elapsed = time_since_ms(audio_alert_start_time_ms);
+
+            if (time_elapsed < 500) {
+                controls->set_buzzer_tone(ControlPanel::BUZZER_G7);
+            } else if (time_elapsed < 1000) {
+                controls->sound_buzzer(false);
+            } else {
+                audio_alert_start_time_ms = millis();
+            }
         }
     }
 }
@@ -75,6 +106,10 @@ void UI_V1::handle_buzzer() {
 UI_V1::Event UI_V1::update() {
     // Handle Buzzer Noises
     handle_buzzer();
+
+    if (alarm_state == Alarm::SILENCE && time_since_ms(silence_time_ms) > 60000) {
+        set_alarm(Alarm::NONE);
+    }
 
     switch (view) {
         case View::ADJUST:
@@ -256,7 +291,44 @@ void UI_V1::set_value(DisplayValue param, float value) {
     display_values[(size_t)param] = value;
 }
 
-void UI_V1::set_alarm(Alarm a) {}
+void UI_V1::set_alarm(Alarm a) {
+    if (alarm_state == Alarm::SILENCE && time_since_ms(silence_time_ms) < 30000) {
+        return;
+    } 
+    
+    if (alarm_state == a) {
+        return;
+    }
+
+    switch (a) {
+        case Alarm::SILENCE:
+            if (alarm_state == Alarm::NONE) {
+                a = Alarm::NONE;
+            } else {
+            silence_time_ms = millis();
+            }
+        case Alarm::NONE:
+            controls->set_status_led(ControlPanel::STATUS_LED_3, false);
+            set_audio_alert(AudioAlert::NONE);
+            break;
+        case Alarm::OVERPRESSURE:
+            controls->set_status_led(ControlPanel::STATUS_LED_3, true);
+            controls->set_status_led_blink(ControlPanel::STATUS_LED_3, 250);
+            set_audio_alert(AudioAlert::ALARM_1);
+
+            break;
+        case Alarm::POWER_LOSS:
+            controls->set_status_led(ControlPanel::STATUS_LED_3, true);
+            controls->set_status_led_blink(ControlPanel::STATUS_LED_3, 100);
+            set_audio_alert(AudioAlert::ALARM_2);
+
+            break;
+        default:
+            break;
+    }
+
+    alarm_state = a;
+}
 
 bool UI_V1::is_bootloader_event() {
     bool ret = (controls->get_button(ControlPanel::STOP_BTN).held_for_more_than(bootloader_time_ms)) &&

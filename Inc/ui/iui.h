@@ -33,6 +33,10 @@ public:
     };
 
     enum class Alarm {
+        NONE,
+        SILENCE,
+        OVERPRESSURE,
+        POWER_LOSS,
         NUM_ALARMS,
     };
 
