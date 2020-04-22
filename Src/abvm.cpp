@@ -173,7 +173,7 @@ extern "C" void abvm_update() {
     }
 
     if (controls.button_pressed_singleshot(ControlPanel::STOP_BTN)) {
-        vent.is_operational = false;
+        vent.stop();
         controls.set_status_led(ControlPanel::STATUS_LED_2, false);
     }
 
