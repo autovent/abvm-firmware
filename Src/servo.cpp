@@ -56,8 +56,8 @@ float Servo::to_rad_at_output(float x) {
 }
 
 bool Servo::test_no_encoder_fault(int32_t counts) {
-    if (counts == 0 && fabsf(command) > .4f) {
-        if (++no_encoder_counts > 30) {
+    if (counts == 0 && fabsf(command) > .6f) {
+        if (++no_encoder_counts > 200) {
             faults.no_encoder = true;
             return true;
         }
