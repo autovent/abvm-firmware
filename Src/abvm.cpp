@@ -62,6 +62,10 @@ CommEndpoint *config_entries[] = {
 
 SerialComm conf(config_entries, 3, &usb_comm);
 
+USBComm::new_line_handler new_line_handlers[] = {
+    {SerialComm::new_line_callback, &conf},
+};
+
 void control_panel_self_test() {
     controls.set_status_led(ControlPanel::STATUS_LED_1, true);
     controls.set_status_led(ControlPanel::STATUS_LED_2, true);
@@ -104,6 +108,7 @@ extern "C" void abvm_init() {
 
     encoder.reset();
     usb_comm.set_as_cdc_consumer();
+    usb_comm.set_new_line_handlers(new_line_handlers, 1);
 
     pressure_sensor.init();
     pressure_sensor.set_powerdown(false);

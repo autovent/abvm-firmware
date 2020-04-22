@@ -1,4 +1,4 @@
-#include "serial_config.h"
+#include "serial_comm.h"
 
 #include <string.h>
 
@@ -51,108 +51,113 @@ bool CommEndpoint::should_stream_out(uint32_t current_ms) {
 SerialComm::SerialComm(CommEndpoint **endpoints, size_t num_endpoints, USBComm *uc)
     : endpoints(endpoints), num_endpoints(num_endpoints), usb(uc) {}
 
-void SerialComm::update(uint32_t current_ms) {
-    uint8_t data[USBComm::MAX_PACKET_SIZE];
-    if (usb->receive_line(data)) {
-        usb->purge();
-        msgFrame f;
+void SerialComm::new_line_callback(uint8_t *data, size_t len, void *arg) {
+    ((SerialComm *)arg)->handle_incoming_message(data, len);
+}
 
-        CommError err = mk_frame(&f, data, sizeof(data));
-        if (err == CommError::ERROR_CRC) {
-            send_error_frame((uint8_t)CommError::ERROR_CRC);
-        } else if (err != CommError::ERROR_BAD_FRAME) {
-            bool processed = false;
-            for (size_t i = 0; i < num_endpoints; i++) {
-                if (endpoints[i]->get_id() == f.id) {
-                    processed = true;
-                    switch (f.header.type) {
-                        case MSG_READ: {
-                            msgFrame resp_frame = {
-                                header : {
-                                    type : MSG_READ_RESP,
-                                    flags : 0,
-                                },
-                                id : f.id,
-                                size : endpoints[i]->get_size(),
-                            };
+void SerialComm::handle_incoming_message(uint8_t *data, size_t len) {
+    msgFrame f;
+    CommError err = mk_frame(&f, data, len);
+    if (err == CommError::ERROR_BAD_FRAME) {
+        return;
+    }
+    if (err == CommError::ERROR_CRC) {
+        send_error_frame((uint8_t)CommError::ERROR_CRC);
+        return;
+    }
 
-                            uint8_t err = endpoints[i]->read(resp_frame.data, resp_frame.size);
+    bool processed = false;
+    for (size_t i = 0; i < num_endpoints; i++) {
+        if (endpoints[i]->get_id() == f.id) {
+            processed = true;
+            switch (f.header.type) {
+                case MSG_READ: {
+                    msgFrame resp_frame = {
+                        header : {
+                            type : MSG_READ_RESP,
+                            flags : 0,
+                        },
+                        id : f.id,
+                        size : endpoints[i]->get_size(),
+                    };
 
-                            if (err) {
-                                send_error_frame(err);
-                                break;
-                            }
+                    uint8_t err = endpoints[i]->read(resp_frame.data, resp_frame.size);
 
-                            send_frame(&resp_frame);
+                    if (err) {
+                        send_error_frame(err);
+                        break;
+                    }
 
-                            break;
-                        }
-                        case MSG_WRITE: {
-                            uint8_t err = endpoints[i]->write(f.data, f.size);
+                    send_frame(&resp_frame);
 
-                            if (err) {
-                                send_error_frame(err);
-                                break;
-                            }
+                    break;
+                }
+                case MSG_WRITE: {
+                    uint8_t err = endpoints[i]->write(f.data, f.size);
 
-                            msgFrame resp_frame = {
-                                header : {
-                                    type : MSG_WRITE_RESP,
-                                    flags : FLAG_ZERO_SIZE,
-                                },
-                                id : f.id,
-                                size : 0,
-                            };
+                    if (err) {
+                        send_error_frame(err);
+                        break;
+                    }
 
-                            send_frame(&resp_frame);
+                    msgFrame resp_frame = {
+                        header : {
+                            type : MSG_WRITE_RESP,
+                            flags : FLAG_ZERO_SIZE,
+                        },
+                        id : f.id,
+                        size : 0,
+                    };
 
-                            break;
-                        }
-                        case MSG_STREAM_SETUP: {
-                            uint32_t stream_interval;
-                            if (f.size == sizeof(uint32_t)) {
-                                stream_interval = *(uint32_t *)f.data;
-                            } else {
-                                send_error_frame((uint8_t)CommError::ERROR_SIZE);
-                            }
+                    send_frame(&resp_frame);
 
-                            endpoints[i]->set_streaming(stream_interval);
+                    break;
+                }
+                case MSG_STREAM_SETUP: {
+                    uint32_t stream_interval;
+                    if (f.size == sizeof(uint32_t)) {
+                        stream_interval = *(uint32_t *)f.data;
+                    } else {
+                        send_error_frame((uint8_t)CommError::ERROR_SIZE);
+                    }
 
-                            msgFrame resp_frame = {
-                                header : {
-                                    type : MSG_STREAM_RESP,
-                                    flags : 0,
-                                },
-                                id : f.id,
-                                size : endpoints[i]->get_size(),
-                            };
+                    endpoints[i]->set_streaming(stream_interval);
 
-                            if (stream_interval == 0) {
-                                resp_frame.header.flags = FLAG_ZERO_SIZE;
-                                resp_frame.size = 0;
-                            } else {
-                                uint8_t err = endpoints[i]->stream_out(resp_frame.data, resp_frame.size, current_ms);
-                                if (err) {
-                                    send_error_frame(err);
-                                    break;
-                                }
-                            }
+                    msgFrame resp_frame = {
+                        header : {
+                            type : MSG_STREAM_RESP,
+                            flags : 0,
+                        },
+                        id : f.id,
+                        size : endpoints[i]->get_size(),
+                    };
 
-                            send_frame(&resp_frame);
-
+                    if (stream_interval == 0) {
+                        resp_frame.header.flags = FLAG_ZERO_SIZE;
+                        resp_frame.size = 0;
+                    } else {
+                        uint8_t err = endpoints[i]->stream_out(resp_frame.data, resp_frame.size, 0);  // TODO: FIX!
+                        if (err) {
+                            send_error_frame(err);
                             break;
                         }
                     }
+
+                    send_frame(&resp_frame);
+
                     break;
                 }
             }
-
-            if (!processed) {
-                send_error_frame((uint8_t)CommError::ERROR_ID);
-            }
+            break;
         }
     }
 
+    if (!processed) {
+        send_error_frame((uint8_t)CommError::ERROR_ID);
+    }
+}
+
+void SerialComm::update(uint32_t current_ms) {
     msgFrame stream_frame = {
         header : {
             type : MSG_STREAM_RESP,

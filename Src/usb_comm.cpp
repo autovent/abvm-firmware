@@ -42,15 +42,23 @@ bool USBComm::append(uint8_t *data, size_t len) {
         if (!is_seperator(data[i]) && buf->size < MAX_PACKET_SIZE - 1) {
             buf->data[buf->size++] = data[i];
         } else if (buf->size != 0) {
-            buf->data[buf->size++] = data[i];
-            //buf->data[buf->size++] = '\0';
+            buf->data[buf->size] = data[i];
+
+            for (size_t i = 0; i < num_new_line_handlers; i++) {
+                new_line_handlers[i].callback(buf->data, buf->size, new_line_handlers[i].arg);
+            }
+
             buf = rx_buf.alloc();
             buf->size = 0;
         }
     }
 
-    //buf->data[buf->size++] = '\0';
     return true;
+}
+
+void USBComm::set_new_line_handlers(new_line_handler *handlers, size_t num_handlers) {
+    new_line_handlers = handlers;
+    num_new_line_handlers = num_handlers;
 }
 
 void USBComm::set_as_cdc_consumer() {

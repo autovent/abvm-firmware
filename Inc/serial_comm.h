@@ -48,6 +48,8 @@ public:
 
     void update(uint32_t current_ms);
 
+    static void new_line_callback(uint8_t *data, size_t len, void *arg);
+
 private:
     static constexpr uint8_t MAX_FRAME_DATA_SIZE = 32;
 
@@ -90,6 +92,8 @@ private:
     void send_frame(msgFrame *f);
 
     void send_error_frame(uint8_t err);
+
+    void handle_incoming_message(uint8_t *data, size_t len);
 };
 
 #endif  // SERIAL_CONFIG_H
