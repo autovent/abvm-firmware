@@ -108,10 +108,13 @@ extern "C" void abvm_init() {
 
     // control_panel_self_test();
 
+    // Reset motor driver faults
+    motor_driver.set_sleep(true);
+    HAL_Delay(1);
     motor_driver.init();
-    motor_driver.set_pwm_enabled(true);
     motor_driver.set_sleep(false);
     motor_driver.set_disabled(false);
+    motor_driver.set_pwm_enabled(true);
 
     encoder.init();
 
