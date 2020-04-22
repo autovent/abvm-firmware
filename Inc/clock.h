@@ -27,6 +27,9 @@ uint64_t micros();
 inline uint32_t time_since_ms(uint32_t start_time) { return millis() - start_time; }
 inline uint64_t time_since_us(uint64_t start_time) { return micros() - start_time; }
 
+uint32_t delay_ms(uint32_t x);
+uint32_t delay_us(uint32_t x);
+
 #ifdef __cplusplus
 }
 #endif

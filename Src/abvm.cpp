@@ -71,13 +71,13 @@ void control_panel_self_test() {
     controls.set_buzzer_tone(ControlPanel::BUZZER_C7);
     controls.set_buzzer_volume(0.8);
     controls.sound_buzzer(true);
-    HAL_Delay(100);
+    delay_ms(100);
     controls.set_buzzer_tone(ControlPanel::BUZZER_G7);
-    HAL_Delay(100);
+    delay_ms(100);
     controls.set_buzzer_tone(ControlPanel::BUZZER_E7);
-    HAL_Delay(100);
+    delay_ms(100);
     controls.set_buzzer_tone(ControlPanel::BUZZER_C8);
-    HAL_Delay(100);
+    delay_ms(100);
     controls.sound_buzzer(false);
 
     controls.set_status_led(ControlPanel::STATUS_LED_1, false);
