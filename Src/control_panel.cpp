@@ -1,4 +1,5 @@
 #include "control_panel.h"
+#include "clock.h"
 
 #include <assert.h>
 
@@ -116,8 +117,8 @@ void ControlPanel::sound_buzzer(bool on) {
 }
 
 void ControlPanel::update() {
-    if (HAL_GetTick() > last_charlie_update_ms + CHARLIE_UPDATE_INTERVAL_MS) {
-        last_charlie_update_ms = HAL_GetTick();
+    if (millis() > last_charlie_update_ms + CHARLIE_UPDATE_INTERVAL_MS) {
+        last_charlie_update_ms = millis();
 
         charlieplex(led_bar_left, bar_states[BAR_GRAPH_LEFT].current++);
         charlieplex(led_bar_right, bar_states[BAR_GRAPH_RIGHT].current++);
