@@ -300,8 +300,8 @@ void UI_V1::set_value(DisplayValue param, float value) {
 void UI_V1::set_alarm(Alarm a) {
     if (alarm_state == Alarm::SILENCE && time_since_ms(silence_time_ms) < 30000) {
         return;
-    } 
-    
+    }
+
     if (alarm_state == a) {
         return;
     }
@@ -311,7 +311,7 @@ void UI_V1::set_alarm(Alarm a) {
             if (alarm_state == Alarm::NONE) {
                 a = Alarm::NONE;
             } else {
-            silence_time_ms = millis();
+                silence_time_ms = millis();
             }
         case Alarm::NONE:
             controls->set_status_led(ControlPanel::STATUS_LED_3, false);
