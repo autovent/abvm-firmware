@@ -26,6 +26,10 @@ size_t USBComm::receive_line(uint8_t *data) {
     }
 }
 
+void USBComm::purge() {
+    rx_buf.empty();
+}
+
 bool USBComm::append(uint8_t *data, size_t len) {
     if (rx_buf.full()) {
         return false;
@@ -38,13 +42,14 @@ bool USBComm::append(uint8_t *data, size_t len) {
         if (!is_seperator(data[i]) && buf->size < MAX_PACKET_SIZE - 1) {
             buf->data[buf->size++] = data[i];
         } else if (buf->size != 0) {
-            buf->data[buf->size++] = '\0';
+            buf->data[buf->size++] = data[i];
+            //buf->data[buf->size++] = '\0';
             buf = rx_buf.alloc();
             buf->size = 0;
         }
     }
 
-    buf->data[buf->size++] = '\0';
+    //buf->data[buf->size++] = '\0';
     return true;
 }
 

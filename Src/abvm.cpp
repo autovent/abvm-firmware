@@ -16,6 +16,7 @@
 #include "main.h"
 #include "record_store.h"
 #include "servo.h"
+#include "serial_comm.h"
 #include "spi.h"
 #include "tim.h"
 #include "usb_comm.h"
@@ -44,6 +45,23 @@ ControlPanel controls(SW_START_GPIO_Port, SW_START_Pin, SW_STOP_GPIO_Port, SW_ST
 LC064 eeprom(&hi2c1, 0);
 
 RecordStore record_store(&eeprom);
+
+uint32_t test_config_32 = 0x12345678;
+uint16_t test_config_16 = 0x1234;
+uint8_t test_config_8 = 0x12;
+
+CommEndpoint entry1(1, &test_config_32, sizeof(test_config_32));
+CommEndpoint entry2(2, &test_config_16, sizeof(test_config_16));
+CommEndpoint entry3(3, &test_config_8, sizeof(test_config_8));
+
+CommEndpoint *config_entries[] = {
+    &entry1,
+    &entry2,
+    &entry3,
+};
+
+SerialComm conf(config_entries, 3, &usb_comm);
+
 void control_panel_self_test() {
     controls.set_status_led(ControlPanel::STATUS_LED_1, true);
     controls.set_status_led(ControlPanel::STATUS_LED_2, true);
@@ -82,7 +100,7 @@ Pin homing_switch{LIMIT2_GPIO_Port, LIMIT2_Pin};
 HomingController home(&motor, &homing_switch);
 
 extern "C" void abvm_init() {
-    BootLoader::set_next_boot(BootLoader::BOOT_SELECT_APP);
+    // BootLoader::set_next_boot(BootLoader::BOOT_SELECT_APP);
 
     encoder.reset();
     usb_comm.set_as_cdc_consumer();
@@ -120,6 +138,7 @@ uint32_t debounce_intvl = 10;
 
 extern "C" void abvm_update() {
     controls.update();
+    conf.update(HAL_GetTick());
 
     if (HAL_GetTick() > last_motor + motor_interval) {
         motor.update();
@@ -145,27 +164,27 @@ extern "C" void abvm_update() {
         last_motion = HAL_GetTick();
     }
 
-    if (HAL_GetTick() > last + 20) {
-        float pressure = pressure_sensor.read();
-        static char data[128];
-        snprintf(data, sizeof(data),
-                 "%1.3f,"
-                 "%1.3f,"
-                 "%1.3f,"
-                 "%1.3f,"
-                 "%1.3f,"
-                 "%1.3f,"
-                 "%1.3f,"
-                 "%1.0f,"
-                 "%1.0f,"
-                 "%1.0f,"
-                 "%lu\r\n",
-                 msec_to_sec(HAL_GetTick()), psi_to_cmH2O(pressure), motor.velocity, motor.target_velocity,
-                 motor.position, motor.target_pos, motor_driver.get_current(), vent.get_rate(), vent.get_closed_pos(),
-                 vent.get_open_pos(), motor.faults.to_int());
-        usb_comm.send((uint8_t *)data, strlen(data));
-        last = HAL_GetTick();
-    }
+    // if (HAL_GetTick() > last + 20) {
+    //     float pressure = pressure_sensor.read();
+    //     static char data[128];
+    //     snprintf(data, sizeof(data),
+    //              "%1.3f,"
+    //              "%1.3f,"
+    //              "%1.3f,"
+    //              "%1.3f,"
+    //              "%1.3f,"
+    //              "%1.3f,"
+    //              "%1.3f,"
+    //              "%1.0f,"
+    //              "%1.0f,"
+    //              "%1.0f,"
+    //              "%lu\r\n",
+    //              msec_to_sec(HAL_GetTick()), psi_to_cmH2O(pressure), motor.velocity, motor.target_velocity,
+    //              motor.position, motor.target_pos, motor_driver.get_current(), vent.get_rate(), vent.get_closed_pos(),
+    //              vent.get_open_pos(), motor.faults.to_int());
+    //     usb_comm.send((uint8_t *)data, strlen(data));
+    //     last = HAL_GetTick();
+    // }
 
     if (controls.button_pressed_singleshot(ControlPanel::START_MODE_BTN)) {
         vent.is_operational = true;
