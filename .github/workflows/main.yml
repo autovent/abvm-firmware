@@ -69,7 +69,7 @@ jobs:
           git config user.email "autovent-bot@autovent.org"
           git config user.name "autovent-bot"
           git commit -m ".firmware update --- Updated firmware to lates"
-          git push https://$USERNAME:$REPO_KEY@github.com/autovent/update.git gh-pages
+          git push https://cwoodall:$REPO_KEY@github.com/autovent/update.git gh-pages
         env:
           REPO_KEY: ${{ secrets.AUTOVENT_PAT }}
           USERNAME: autovent-bot
