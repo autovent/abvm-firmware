@@ -16,14 +16,14 @@ void VentilatorController::start() {
     motor->set_mode(Servo::Mode::POSITION);
     state = State::GO_TO_IDLE;
 
-    motion->set_next({kIdlePositiong_deg, kTimeToIdle_ms});
+    motion->set_next({kIdlePositiong_deg, 0, kTimeToIdle_ms});
     motor->set_pos_deg(motion->run(motor->position));
     is_operational = true;
 }
 
 void VentilatorController::stop() {
     state = State::GO_TO_IDLE;
-    motion->force_next({kIdlePositiong_deg, kTimeToIdle_ms});
+    motion->force_next({kIdlePositiong_deg, 0, kTimeToIdle_ms});
     motor->set_pos_deg(motion->run(motion->get_pos()));
 
     is_operational = false;
