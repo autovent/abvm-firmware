@@ -8,6 +8,7 @@
 #define CONFIG_LONG_SPIRIT_FINGERS
 
 enum class Modes {
+    FACTORY_TEST,
     CALIBRATION,
     VENTILATOR,
 };
