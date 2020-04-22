@@ -76,25 +76,31 @@ void UI_V1::handle_buzzer() {
                 audio_alert_in_progress = false;
             }
         } else if (current_alert == AudioAlert::ALARM_1) {
-            controls->set_buzzer_volume(0.8);
-            controls->sound_buzzer(true);
             uint32_t time_elapsed = time_since_ms(audio_alert_start_time_ms);
 
             if (time_elapsed < 250) {
+                controls->set_buzzer_volume(0.8);
+                controls->sound_buzzer(true);
                 controls->set_buzzer_tone(ControlPanel::BUZZER_C7);
             } else if (time_elapsed < 500) {
+                controls->set_buzzer_volume(0);
+                controls->sound_buzzer(false);
                 controls->sound_buzzer(false);
             } else {
                 audio_alert_start_time_ms = millis();
             }
         } else if (current_alert == AudioAlert::ALARM_2) {
-            controls->set_buzzer_volume(0.8);
-            controls->sound_buzzer(true);
             uint32_t time_elapsed = time_since_ms(audio_alert_start_time_ms);
 
             if (time_elapsed < 500) {
+                controls->set_buzzer_volume(0.8);
+                controls->sound_buzzer(true);
+
                 controls->set_buzzer_tone(ControlPanel::BUZZER_G7);
             } else if (time_elapsed < 1000) {
+                controls->set_buzzer_volume(0);
+                controls->sound_buzzer(false);
+
                 controls->sound_buzzer(false);
             } else {
                 audio_alert_start_time_ms = millis();
