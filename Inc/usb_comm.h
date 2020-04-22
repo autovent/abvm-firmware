@@ -20,7 +20,7 @@ public:
     template <typename... Args>
     bool sendf(const char *fmt, Args... args) {
         static char data[256];
-        vsnprintf(data, sizeof(data), fmt, args...);
+        snprintf(data, sizeof(data), fmt, args...);
         bool result = send((uint8_t *)data, strlen(data));
         return result;
     }
