@@ -58,6 +58,7 @@ jobs:
           repository: autovent/update
           ref: refs/heads/gh-pages
           path: update
+          token: ${{ secrets.AUTOVENT_PAT }}
       - name: Push to private repo
         run: | 
           export repo_root=`pwd`
@@ -68,6 +69,9 @@ jobs:
           git config user.email "autovent-bot@autovent.org"
           git config user.name "autovent-bot"
           git commit -m ".firmware update --- Updated firmware to lates"
-          git push
+          git push https://$USERNAME:$REPO_KEY@github.com/autovent/update.git gh-pages
+        env:
+          REPO_KEY: ${{ secrets.AUTOVENT_PAT }}
+          USERNAME: autovent-bot
 
 
