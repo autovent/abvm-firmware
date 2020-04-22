@@ -10,3 +10,11 @@ uint32_t millis() {
 uint64_t micros() {
     return TIM_GetMicros();
 }
+
+uint32_t delay_ms(uint32_t x) {
+    HAL_Delay(x);
+}
+
+uint32_t delay_us(uint32_t x) {
+    TIM_DelayMicros(x);
+}
