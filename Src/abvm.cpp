@@ -4,6 +4,7 @@
 
 #include "ads1231.h"
 #include "bootloader.h"
+#include "clock.h"
 #include "config.h"
 #include "control_panel.h"
 #include "controls/trapezoidal_planner.h"
@@ -77,13 +78,13 @@ void control_panel_self_test() {
     controls.set_buzzer_tone(ControlPanel::BUZZER_C7);
     controls.set_buzzer_volume(0.8);
     controls.sound_buzzer(true);
-    HAL_Delay(100);
+    delay_ms(100);
     controls.set_buzzer_tone(ControlPanel::BUZZER_G7);
-    HAL_Delay(100);
+    delay_ms(100);
     controls.set_buzzer_tone(ControlPanel::BUZZER_E7);
-    HAL_Delay(100);
+    delay_ms(100);
     controls.set_buzzer_tone(ControlPanel::BUZZER_C8);
-    HAL_Delay(100);
+    delay_ms(100);
     controls.sound_buzzer(false);
 
     controls.set_status_led(ControlPanel::STATUS_LED_1, false);
@@ -145,12 +146,12 @@ extern "C" void abvm_update() {
     controls.update();
     conf.update(HAL_GetTick());
 
-    if (HAL_GetTick() > last_motor + motor_interval) {
+    if (millis() > last_motor + motor_interval) {
         motor.update();
-        last_motor = HAL_GetTick();
+        last_motor = millis();
     }
 
-    if (HAL_GetTick() > last_motion + 10) {
+    if (millis() > last_motion + 10) {
         pressure_sensor.update();
 
         if (!home.is_done()) {
@@ -166,7 +167,7 @@ extern "C" void abvm_update() {
             vent.update();
         }
 
-        last_motion = HAL_GetTick();
+        last_motion = millis();
     }
 
     // if (HAL_GetTick() > last + 20) {
@@ -197,7 +198,7 @@ extern "C" void abvm_update() {
     }
 
     if (controls.button_pressed_singleshot(ControlPanel::STOP_BTN)) {
-        vent.is_operational = false;
+        vent.stop();
         controls.set_status_led(ControlPanel::STATUS_LED_2, false);
     }
 

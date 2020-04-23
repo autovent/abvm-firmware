@@ -2,8 +2,8 @@
 
 #include <math.h>
 
+#include "clock.h"
 #include "spi.h"
-#include "tim.h"
 
 #define SPI_TIMEOUT 10
 
@@ -44,9 +44,9 @@ bool ADS1231::update() {
         HAL_SPI_Receive(hspi, data, sizeof(data), SPI_TIMEOUT);
         enable_spi(false);
 
-        TIM_DelayMicros(1);
+        delay_us(1);
         HAL_GPIO_WritePin(sclk_port, sclk_pin, GPIO_PIN_SET);
-        TIM_DelayMicros(1);
+        delay_us(1);
         HAL_GPIO_WritePin(sclk_port, sclk_pin, GPIO_PIN_RESET);
 
         // Two's complement of 24 bit value. Make sure the sign gets

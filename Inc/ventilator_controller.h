@@ -20,7 +20,7 @@ public:
 
     VentilatorController(IMotionPlanner *motion, Servo *motor);
     void start();
-
+    void stop();
     float update();
 
     void reset();
@@ -46,6 +46,7 @@ public:
     inline float get_rate() {
         return rate_settings[get_rate_idx()];
     }
+
     bool is_operational;
 
 private:
