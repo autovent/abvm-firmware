@@ -33,10 +33,10 @@ constexpr uint32_t kSilenceTime_ms = 30000;
 
 #if defined(MOTOR_GOBILDA_30RPM)
 constexpr Servo::Config kMotorParams = kGoBilda_YellowJacket_5202_0002_0188_30RPM;
-constexpr PID::Params kMotorVelPidParams = {2.8, .0, .0};
-constexpr PID::Params kMotorPosPidParams = {14.5, .1, .0};                         //.02};
-constexpr Range<float> kMotorVelLimits = {-30 * 0.104719755, 30 * 0.104719755};  // RPM to rads/sec
-constexpr Range<float> kMotorPosLimits = {0, deg_to_rad(95)};
+constexpr PID::Params kMotorVelPidParams = {3, .1, .002};
+constexpr PID::Params kMotorPosPidParams = {14, .2, 0.01};                         //.02};
+constexpr Range<float> kMotorVelLimits = {-28 * 0.104719755, 28 * 0.104719755};  // RPM to rads/sec
+constexpr Range<float> kMotorPosLimits = {0, deg_to_rad(90)};
 
 #elif defined(MOTOR_ROBOTZONE_16RPM)
 constexpr Servo::Config kMotorParams = kRobotZone_638312_16RPM;
