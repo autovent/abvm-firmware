@@ -64,7 +64,8 @@ jobs:
           export repo_root=`pwd`
           echo "repo1_root: ${repo1_root}"
           cd $GITHUB_WORKSPACE/update
-          cp $repo_root/*.bin resources/firmwares/firmware.bin
+          cp $repo_root/*.bin resources/firmwares/
+          cp $repo_root/*.bin resources/firmwares/latest.bin
           git add --all
           git config user.email "autovent-bot@autovent.org"
           git config user.name "autovent-bot"
