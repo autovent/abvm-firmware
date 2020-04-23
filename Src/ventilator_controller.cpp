@@ -51,6 +51,13 @@ float VentilatorController::update() {
         is_fast_open = true;
     }
 
+    if (motor->i_measured > 4.5 && state != State::INSPIRATION) {
+        state = State::EXPIRATION;
+        motion->force_next({kOpenPosition_deg, 0, kFastOpenTime_ms});
+        motor->set_pos_deg(motion->run(motion->get_pos()));
+        is_fast_open = true;
+    }
+
     if (!is_operational && state != State::IDLE) {
         state = State::GO_TO_IDLE;
     }
