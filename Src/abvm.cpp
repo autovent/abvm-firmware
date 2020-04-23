@@ -23,6 +23,8 @@
 #include "usb_comm.h"
 #include "ventilator_controller.h"
 
+uint8_t HW_REVISION = 1;
+
 ADS1231 pressure_sensor(ADC2_PWRDN_GPIO_Port, ADC2_PWRDN_Pin, &hspi1, ADC_SPI_MISO_GPIO_Port, ADC_SPI_MISO_Pin,
                         ADC_SPI_SCK_GPIO_Port, ADC_SPI_SCK_Pin, 1.0f / (6.8948 * .0005),
                         (1 / (6.8948 * .0005)) * -0.00325f);
@@ -47,24 +49,15 @@ LC064 eeprom(&hi2c1, 0);
 
 RecordStore record_store(&eeprom);
 
-uint32_t test_config_32 = 0x12345678;
-uint16_t test_config_16 = 0x1234;
-uint8_t test_config_8 = 0x12;
-
-CommEndpoint entry1(1, &test_config_32, sizeof(test_config_32));
-CommEndpoint entry2(2, &test_config_16, sizeof(test_config_16));
-CommEndpoint entry3(3, &test_config_8, sizeof(test_config_8), true);
-
+CommEndpoint hw_revision_endpoint(0, &HW_REVISION, sizeof(HW_REVISION), true);
 CommEndpoint *config_entries[] = {
-    &entry1,
-    &entry2,
-    &entry3,
+    &hw_revision_endpoint
 };
 
-SerialComm conf(config_entries, 3, &usb_comm);
+SerialComm ser_comm(config_entries, sizeof(config_entries)/sizeof(config_entries[0]), &usb_comm);
 
 USBComm::packet_handler packet_handlers[] = {
-    {SerialComm::packet_callback, &conf},
+    {SerialComm::packet_callback, &ser_comm},
 };
 
 void control_panel_self_test() {
@@ -144,7 +137,7 @@ uint32_t debounce_intvl = 10;
 
 extern "C" void abvm_update() {
     controls.update();
-    conf.update();
+    ser_comm.update();
 
     if (millis() > last_motor + motor_interval) {
         motor.update();

@@ -1,20 +1,18 @@
-[config1]
+# Endpoint descriptors look like this:
+# [endpoint_name]
+# id = numeric endpoint ID
+# size = endpoint size in bytes
+# format = format chars for packing and unpacking values
+# subitems = (optional) list of names given to sub-values
+#
+# EX:
+# [example_endpoint]
+# id = 1
+# size = 8
+# format = "BbLH"    # unsigned byte, signed byte, unsigned long, unsigned short
+# subitems = ["item1", "item2", "item3", "item4"]
+
+[hw_revision]
 id = 1
-size = 4
-format = "L"
-
-[config1_split]
-id = 1
-size = 4
-format = "HH"
-subitems = ["a", "b"]
-
-[config2]
-id = 2
-size = 2
-format = "H"
-
-[config3]
-id = 3
 size = 1
 format = "B"
