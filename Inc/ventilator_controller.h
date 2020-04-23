@@ -5,6 +5,7 @@
 #include "math/conversions.h"
 #include "math/dsp.h"
 #include "servo.h"
+#include "drivers/sensor.h"
 
 class VentilatorController {
 public:
@@ -18,10 +19,10 @@ public:
         NUM_STATES,
     };
 
-    VentilatorController(IMotionPlanner *motion, Servo *motor);
+    VentilatorController(IMotionPlanner *motion, Servo *motor, ISensor *pressure);
     void start();
     void stop();
-    float update(float pressure);
+    float update();
 
     void reset();
 
@@ -56,11 +57,14 @@ public:
         return rate_settings[get_rate_idx()];
     }
 
+
     float get_peak_pressure_cmH2O();
     float get_plateau_pressure_cmH2O();
     inline float get_peak_pressure_limit_cmH2O() const {
         return peak_pressure_limit_cmH2O;
     }
+
+    float get_pressure_cmH2O() { return pressure_cmH2O; }
 
     void increment_peak_pressure_limit_cmH2O(float x) {
       peak_pressure_limit_cmH2O = saturate(peak_pressure_limit_cmH2O + x, kPeakPressureDisplayMin, kPeakPressureDisplayMax);
@@ -69,6 +73,7 @@ public:
 private:
     IMotionPlanner *motion;
     Servo *motor;
+    ISensor *pressure_sensor;
 
     State state;
 
@@ -96,5 +101,6 @@ private:
     float last_plateau_pressure;
     float current_plateau_pressure;
 
+    float pressure_cmH2O = 0 ;
     float peak_pressure_limit_cmH2O;
 };

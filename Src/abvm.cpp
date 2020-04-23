@@ -69,7 +69,7 @@ Servo motor(1, &motor_driver, &encoder, kMotorParams, kMotorVelPidParams, kMotor
 
 Pin power_detect{MEASURE_12V_GPIO_Port, MEASURE_12V_Pin};
 
-VentilatorController vent(&motion, &motor);
+VentilatorController vent(&motion, &motor, &pressure_sensor);
 Pin homing_switch{LIMIT2_GPIO_Port, LIMIT2_Pin};
 HomingController home(&motor, &homing_switch);
 
@@ -121,8 +121,6 @@ extern "C" void abvm_update() {
 
     if (millis() > last_motion + 10) {
         pressure_sensor.update();
-        float pressure = psi_to_cmH2O(pressure_sensor.read());
-
         if (!home.is_done()) {
             home.update();
             if (home.is_done()) {
@@ -131,10 +129,10 @@ extern "C" void abvm_update() {
                 motor_driver.set_pwm(0);
                 vent.reset();
                 vent.stop();
-                vent.update(pressure);
+                vent.update();
             }
         } else {
-            vent.update(pressure);
+            vent.update();
         }
 
         last_motion = millis();
