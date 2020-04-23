@@ -27,7 +27,7 @@
 
 ADS1231 pressure_sensor(ADC1_PWRDN_GPIO_Port, ADC1_PWRDN_Pin, &hspi1, ADC_SPI_MISO_GPIO_Port, ADC_SPI_MISO_Pin,
                         ADC_SPI_SCK_GPIO_Port, ADC_SPI_SCK_Pin, 1.0f / (6.8948 * .00054),
-                        -.09 + (1 / (6.8948 /*kPA/psi*/ * .00054)) * -0.00325f);
+                        .045 + (1 / (6.8948 /*kPA/psi*/ * .00054)) * -0.00325f);
 
 DRV8873 motor_driver(MC_SLEEP_GPIO_Port, MC_SLEEP_Pin, MC_DISABLE_GPIO_Port, MC_DISABLE_Pin, MC_FAULT_GPIO_Port,
                      MC_FAULT_Pin, &htim2, TIM_CHANNEL_1, TIM_CHANNEL_3, &hspi2, MC_SPI_CS_GPIO_Port, MC_SPI_CS_Pin,
@@ -63,7 +63,7 @@ LC064 eeprom(&hi2c1, 0);
 
 RecordStore record_store(&eeprom);
 
-TrapezoidalPlanner motion({.5, .5}, 10);
+TrapezoidalPlanner motion({.4, .4}, 10);
 
 Servo motor(1, &motor_driver, &encoder, kMotorParams, kMotorVelPidParams, kMotorVelLimits, kMotorPosPidParams,
             kMotorPosLimits);
@@ -149,17 +149,17 @@ extern "C" void abvm_update() {
         last_motion = millis();
     }
 
-    if (millis() > last + 40) {
+    if (millis() > last + 50) {
         float pressure = pressure_sensor.read();
         static char data[128];
         snprintf(data, sizeof(data),
                  "%1.3f,"
+                 "%1.1f,"
+                 "%1.1f,"
+                 "%1.1f,"
                  "%1.3f,"
-                 "%1.3f,"
-                 "%1.3f,"
-                 "%1.3f,"
-                 "%1.3f,"
-                 "%1.3f,"
+                 "%1.2f,"
+                 "%1.2f,"
                  "%1.0f,"
                  "%1.0f,"
                  "%1.0f,"
@@ -167,7 +167,7 @@ extern "C" void abvm_update() {
                  "%1.0f,"
                  "%1.0f"
                  "\r\n",
-                 msec_to_sec(millis()), psi_to_cmH2O(pressure), motor.velocity, motor.target_velocity, motor.position,
+                 msec_to_sec(millis()), psi_to_cmH2O(pressure), rad_per_sec_to_rpm(motor.velocity), rad_per_sec_to_rpm(motor.target_velocity), motor.position,
                  motor.target_pos, motor.i_measured, vent.get_rate(), vent.get_closed_pos(),
                  vent.get_open_pos(), motor.faults.to_int(), vent.get_peak_pressure_cmH2O(),
                  vent.get_plateau_pressure_cmH2O());
