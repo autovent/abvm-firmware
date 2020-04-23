@@ -21,7 +21,7 @@ enum class CommError : uint8_t {
  */
 class CommEndpoint {
 public:
-    explicit CommEndpoint(uint8_t id, void *const data_ptr, size_t size);
+    explicit CommEndpoint(uint8_t id, void *const data_ptr, size_t size, bool read_only=false);
 
     virtual uint8_t write(void *data, size_t size);
     virtual uint8_t read(void *data, size_t size);
@@ -40,6 +40,7 @@ protected:
     void *const data;
     uint32_t stream_interval_ms;
     uint32_t last_stream_ms;
+    bool read_only;
 };
 
 class SerialComm {

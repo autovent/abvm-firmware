@@ -4,11 +4,16 @@
 
 #include "crc16.h"
 
-CommEndpoint::CommEndpoint(uint8_t id, void *const data_ptr, size_t size) : id(id), data(data_ptr), size(size) {}
+CommEndpoint::CommEndpoint(uint8_t id, void *const data_ptr, size_t size, bool read_only)
+    : id(id), size(size), data(data_ptr), read_only(read_only) {}
 
 uint8_t CommEndpoint::write(void *data, size_t size) {
     if (size != this->size) {
         return (uint8_t)CommError::ERROR_SIZE;
+    }
+
+    if (read_only) {
+        return (uint8_t)CommError::ERROR_WRITE;
     }
 
     memcpy(this->data, data, size);
