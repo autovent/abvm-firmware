@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include "sys/alarms.h"
 
 // UI Interface
 class IUI {
@@ -32,17 +33,9 @@ public:
         NUM_DISPLAY_VALUES //! KEEP AT END OF  LIST
     };
 
-    enum class Alarm {
-        NONE,
-        SILENCE,
-        OVERPRESSURE,
-        POWER_LOSS,
-        NUM_ALARMS,
-    };
 
     static constexpr size_t kNumDisplayValues = (size_t)DisplayValue::NUM_DISPLAY_VALUES;
     static constexpr size_t kNumEvents = (size_t)Event::NUM_EVENTS;
-    static constexpr size_t kNumAlarms = (size_t)Alarm::NUM_ALARMS;
 
     virtual ~IUI() = default;
 
@@ -53,5 +46,8 @@ public:
 
     virtual void set_value(DisplayValue param, float value) = 0;
 
-    virtual void set_alarm(Alarm a) = 0;
+    virtual void set_alarm(Alarms const &a) = 0;
+
+    virtual void silence() = 0;
+    virtual bool is_silenced() = 0;
 };

@@ -11,6 +11,7 @@
 #include "drivers/pin.h"
 #include "drv8873.h"
 #include "encoder.h"
+#include "factory/tests.h"
 #include "homing_controller.h"
 #include "i2c.h"
 #include "lc064.h"
@@ -22,7 +23,7 @@
 #include "ui/ui_v1.h"
 #include "usb_comm.h"
 #include "ventilator_controller.h"
-#include "factory/tests.h"
+#include "sys/alarms.h"
 
 ADS1231 pressure_sensor(ADC1_PWRDN_GPIO_Port, ADC1_PWRDN_Pin, &hspi1, ADC_SPI_MISO_GPIO_Port, ADC_SPI_MISO_Pin,
                         ADC_SPI_SCK_GPIO_Port, ADC_SPI_SCK_Pin, 1.0f / (6.8948 * .00054),
@@ -73,7 +74,11 @@ VentilatorController vent(&motion, &motor, &pressure_sensor);
 Pin homing_switch{LIMIT2_GPIO_Port, LIMIT2_Pin};
 HomingController home(&motor, &homing_switch);
 
+Alarms alarms;
+
 extern "C" void abvm_init() {
+    alarms.clear_all();
+
     encoder.reset();
     usb_comm.set_as_cdc_consumer();
 
@@ -102,6 +107,8 @@ extern "C" void abvm_init() {
     controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_RIGHT, 1);
     home.start();
     ui.init();
+
+    // Power on self test here
 }
 
 uint32_t last = 0;
@@ -109,7 +116,6 @@ uint32_t last_motor = 0;
 uint32_t last_motion = 0;
 uint32_t interval = 1000;
 uint32_t motor_interval = 1;
-
 
 extern "C" void abvm_update() {
     controls.update();
@@ -135,6 +141,11 @@ extern "C" void abvm_update() {
             vent.update();
         }
 
+        alarms.set(Alarms::OVER_PRESSURE, vent.get_peak_pressure_cmH2O() >= vent.get_peak_pressure_limit_cmH2O());
+        alarms.set(Alarms::LOSS_OF_POWER, !power_detect.read());
+        alarms.set(Alarms::MOTION_FAULT, motor.faults.to_int());
+        alarms.set(Alarms::OVER_CURRENT, motor_driver.get_fault());
+
         last_motion = millis();
     }
 
@@ -157,37 +168,28 @@ extern "C" void abvm_update() {
                  "%1.0f"
                  "\r\n",
                  msec_to_sec(millis()), psi_to_cmH2O(pressure), motor.velocity, motor.target_velocity, motor.position,
-                 motor.target_pos, motor_driver.get_current(), vent.get_rate(), vent.get_closed_pos(),
-                 vent.get_open_pos(), motor.faults.to_int(),
-                 vent.get_peak_pressure_cmH2O(),
-                 vent.get_plateau_pressure_cmH2O()
-                 );
+                 motor.target_pos, motor.i_measured, vent.get_rate(), vent.get_closed_pos(),
+                 vent.get_open_pos(), motor.faults.to_int(), vent.get_peak_pressure_cmH2O(),
+                 vent.get_plateau_pressure_cmH2O());
         usb_comm.send((uint8_t *)data, strlen(data));
         last = millis();
     }
 
+    ui.set_alarm(alarms);
     ui.set_value(IUI::DisplayValue::TIDAL_VOLUME, vent.get_tv_idx());
     ui.set_value(IUI::DisplayValue::RESPIRATORY_RATE, vent.get_rate_idx());
     ui.set_value(IUI::DisplayValue::PEAK_PRESSURE, vent.get_peak_pressure_cmH2O());
     ui.set_value(IUI::DisplayValue::PLATEAU_PRESSURE, vent.get_plateau_pressure_cmH2O());
     ui.set_value(IUI::DisplayValue::PEAK_PRESSURE_ALARM, vent.get_peak_pressure_limit_cmH2O());
 
-    if (vent.get_peak_pressure_cmH2O() >= vent.get_peak_pressure_limit_cmH2O()) {
-        ui.set_alarm(UI_V1::Alarm::OVERPRESSURE);
-    }
-
-    if (!power_detect.read()) {
-        ui.set_alarm(UI_V1::Alarm::POWER_LOSS);
-    }
-
     switch (ui.update()) {
         case IUI::Event::START:
-            if (home.is_done() && !vent.is_running()) {
+            if (alarms.is_any_alarmed()) {
+                ui.silence();
+            } else if (home.is_done() && !vent.is_running()) {
                 ui.set_audio_alert(UI_V1::AudioAlert::STARTING);
                 vent.start();
                 controls.set_status_led(ControlPanel::STATUS_LED_2, true);
-            } else if (vent.is_running()) {
-                ui.set_alarm(UI_V1::Alarm::SILENCE);
             }
             break;
         case IUI::Event::STOP:
@@ -216,8 +218,6 @@ extern "C" void abvm_update() {
             break;
 
         case IUI::Event::SILENCE_ALARM:
-            ui.set_alarm(UI_V1::Alarm::SILENCE);
-            // TODO: Fill in this implementation
             break;
 
         case IUI::Event::GO_TO_BOOTLOADER:

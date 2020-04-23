@@ -14,9 +14,12 @@ void UI_V1::init() {
 }
 
 void UI_V1::set_audio_alert(AudioAlert alert) {
-    current_alert = alert;
-    audio_alert_in_progress = true;
-    audio_alert_start_time_ms = millis();
+ if (alert == AudioAlert::NONE || !audio_alert_in_progress || ((uint32_t) alert > (uint32_t) current_alert)) {
+        current_alert = alert;
+        audio_alert_in_progress = true;
+        audio_alert_start_time_ms = millis();
+
+    }
 }
 
 void UI_V1::handle_buzzer() {
@@ -75,35 +78,48 @@ void UI_V1::handle_buzzer() {
                 audio_alert_start_time_ms = 0;
                 audio_alert_in_progress = false;
             }
-        } else if (current_alert == AudioAlert::ALARM_1) {
-            uint32_t time_elapsed = time_since_ms(audio_alert_start_time_ms);
-
-            if (time_elapsed < 250) {
-                controls->set_buzzer_volume(0.8);
-                controls->sound_buzzer(true);
-                controls->set_buzzer_tone(ControlPanel::BUZZER_C7);
-            } else if (time_elapsed < 500) {
-                controls->set_buzzer_volume(0);
-                controls->sound_buzzer(false);
+        } else if (current_alert == AudioAlert::ALERT_BEEPING) {
+            if (is_silence) {
                 controls->sound_buzzer(false);
             } else {
-                audio_alert_start_time_ms = millis();
+                uint32_t time_elapsed = time_since_ms(audio_alert_start_time_ms);
+
+                if (time_elapsed < 250) {
+                    controls->set_buzzer_volume(0.8);
+                    controls->sound_buzzer(true);
+                    controls->set_buzzer_tone(ControlPanel::BUZZER_C7);
+                } else if (time_elapsed < 500) {
+                    controls->set_buzzer_volume(0);
+                    controls->sound_buzzer(false);
+                } else {
+                    audio_alert_start_time_ms = millis();
+                }
             }
-        } else if (current_alert == AudioAlert::ALARM_2) {
-            uint32_t time_elapsed = time_since_ms(audio_alert_start_time_ms);
-
-            if (time_elapsed < 500) {
-                controls->set_buzzer_volume(0.8);
-                controls->sound_buzzer(true);
-
-                controls->set_buzzer_tone(ControlPanel::BUZZER_G7);
-            } else if (time_elapsed < 1000) {
-                controls->set_buzzer_volume(0);
+        } else if (current_alert == AudioAlert::ALERT_CONTINUOUS_CRESCENDO) {
+            if (is_silence) {
                 controls->sound_buzzer(false);
 
-                controls->sound_buzzer(false);
             } else {
-                audio_alert_start_time_ms = millis();
+                uint32_t time_elapsed = time_since_ms(audio_alert_start_time_ms);
+
+                if (time_elapsed < 5000) {
+                    controls->set_buzzer_volume(0.4);
+                    controls->sound_buzzer(true);
+                    controls->set_buzzer_tone(ControlPanel::BUZZER_E7);
+                } else if (time_elapsed < 10000) {
+                    controls->set_buzzer_volume(.6);
+                    controls->sound_buzzer(true);
+                    controls->set_buzzer_tone(ControlPanel::BUZZER_E7);
+                } else if (time_elapsed < 15000) {
+                    controls->set_buzzer_volume(.8);
+                    controls->sound_buzzer(true);
+                    controls->set_buzzer_tone(ControlPanel::BUZZER_E7);
+                } else if (time_elapsed < 20000) {
+                    controls->set_buzzer_volume(1.0);
+                    controls->sound_buzzer(true);
+                    controls->set_buzzer_tone(ControlPanel::BUZZER_E7);
+                } 
+
             }
         }
     }
@@ -113,8 +129,8 @@ UI_V1::Event UI_V1::update() {
     // Handle Buzzer Noises
     handle_buzzer();
 
-    if (alarm_state == Alarm::SILENCE && time_since_ms(silence_time_ms) > 60000) {
-        set_alarm(Alarm::NONE);
+    if (is_silence && time_since_ms(silence_time_ms) > kSilenceTime_ms) {
+        is_silence = false;
     }
 
     switch (view) {
@@ -297,43 +313,42 @@ void UI_V1::set_value(DisplayValue param, float value) {
     display_values[(size_t)param] = value;
 }
 
-void UI_V1::set_alarm(Alarm a) {
-    if (alarm_state == Alarm::SILENCE && time_since_ms(silence_time_ms) < 30000) {
-        return;
-    }
+void UI_V1::silence() {
+    is_silence = true;
+    silence_time_ms = millis();
+}
 
-    if (alarm_state == a) {
-        return;
-    }
+void UI_V1::set_alarm(Alarms const &a) {
+    if (a.is_any_alarmed()) {
+        Alarms::Name next = a.get_highest_priority_alarm();
+        if (current_alarm != next) {
+            current_alarm = next;
+            switch (current_alarm) {
+                case Alarms::MOTION_FAULT:
+                    controls->set_status_led(ControlPanel::STATUS_LED_3, true);
+                    controls->set_status_led_blink(ControlPanel::STATUS_LED_3, 500);
+                    set_audio_alert(AudioAlert::ALERT_BEEPING);
 
-    switch (a) {
-        case Alarm::SILENCE:
-            if (alarm_state == Alarm::NONE) {
-                a = Alarm::NONE;
-            } else {
-                silence_time_ms = millis();
+                case Alarms::OVER_PRESSURE:
+                    controls->set_status_led(ControlPanel::STATUS_LED_3, true);
+                    controls->set_status_led_blink(ControlPanel::STATUS_LED_3, 250);
+                    set_audio_alert(AudioAlert::ALERT_BEEPING);
+
+                    break;
+                case Alarms::LOSS_OF_POWER:
+                    controls->set_status_led(ControlPanel::STATUS_LED_3, true);
+                    set_audio_alert(AudioAlert::ALERT_CONTINUOUS_CRESCENDO);
+
+                    break;
+                default:
+                    break;
             }
-        case Alarm::NONE:
-            controls->set_status_led(ControlPanel::STATUS_LED_3, false);
-            set_audio_alert(AudioAlert::NONE);
-            break;
-        case Alarm::OVERPRESSURE:
-            controls->set_status_led(ControlPanel::STATUS_LED_3, true);
-            controls->set_status_led_blink(ControlPanel::STATUS_LED_3, 250);
-            set_audio_alert(AudioAlert::ALARM_1);
-
-            break;
-        case Alarm::POWER_LOSS:
-            controls->set_status_led(ControlPanel::STATUS_LED_3, true);
-            controls->set_status_led_blink(ControlPanel::STATUS_LED_3, 100);
-            set_audio_alert(AudioAlert::ALARM_2);
-
-            break;
-        default:
-            break;
+        }
+    } else if (current_alarm != Alarms::NUM_ALARMS) {
+        current_alarm = Alarms::NUM_ALARMS;
+        controls->set_status_led(ControlPanel::STATUS_LED_3, false);
+        set_audio_alert(AudioAlert::NONE);
     }
-
-    alarm_state = a;
 }
 
 bool UI_V1::is_bootloader_event() {
