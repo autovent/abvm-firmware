@@ -44,9 +44,6 @@ bool USBComm::append(uint8_t *data, size_t len) {
         } else if (buf->size != 0) {
             buf->data[buf->size] = data[i];
 
-            for (size_t i = 0; i < num_new_line_handlers; i++) {
-                new_line_handlers[i].callback(buf->data, buf->size, new_line_handlers[i].arg);
-            }
 
             buf = rx_buf.alloc();
             buf->size = 0;
@@ -56,9 +53,9 @@ bool USBComm::append(uint8_t *data, size_t len) {
     return true;
 }
 
-void USBComm::set_new_line_handlers(new_line_handler *handlers, size_t num_handlers) {
-    new_line_handlers = handlers;
-    num_new_line_handlers = num_handlers;
+void USBComm::set_packet_handlers(packet_handler *handlers, size_t num_handlers) {
+    packet_handlers = handlers;
+    num_packet_handlers = num_handlers;
 }
 
 void USBComm::set_as_cdc_consumer() {
@@ -67,5 +64,10 @@ void USBComm::set_as_cdc_consumer() {
 
 void USBComm::cdcConsumer(uint8_t *data, size_t len, void *arg) {
     USBComm *comm = (USBComm *)arg;
+
+    for (size_t i = 0; i < comm->num_packet_handlers; i++) {
+        comm->packet_handlers[i].callback(data, len, comm->packet_handlers[i].arg);
+    }
+
     comm->append(data, len);
 }

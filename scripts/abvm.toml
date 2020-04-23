@@ -1,0 +1,20 @@
+[config1]
+id = 1
+size = 4
+format = "L"
+
+[config1_split]
+id = 1
+size = 4
+format = "HH"
+subitems = ["a", "b"]
+
+[config2]
+id = 2
+size = 2
+format = "H"
+
+[config3]
+id = 3
+size = 1
+format = "B"

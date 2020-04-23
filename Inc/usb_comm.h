@@ -27,20 +27,20 @@ public:
         return result;
     }
     
-    struct new_line_handler {
+    struct packet_handler {
         void (*callback)(uint8_t *data, size_t len, void *arg);
         void *arg;
     };
 
-    void set_new_line_handlers(new_line_handler *handlers, size_t num_handlers);
+    void set_packet_handlers(packet_handler *handlers, size_t num_handlers);
     
     static constexpr size_t MAX_PACKET_SIZE = 64;
 
 private:
     static constexpr size_t BUFFER_SIZE = 16;
 
-    new_line_handler *new_line_handlers;
-    size_t num_new_line_handlers;
+    packet_handler *packet_handlers;
+    size_t num_packet_handlers;
 
     struct UsbData {
         size_t size;

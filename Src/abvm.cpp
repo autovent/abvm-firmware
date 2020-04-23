@@ -53,7 +53,7 @@ uint8_t test_config_8 = 0x12;
 
 CommEndpoint entry1(1, &test_config_32, sizeof(test_config_32));
 CommEndpoint entry2(2, &test_config_16, sizeof(test_config_16));
-CommEndpoint entry3(3, &test_config_8, sizeof(test_config_8));
+CommEndpoint entry3(3, &test_config_8, sizeof(test_config_8), true);
 
 CommEndpoint *config_entries[] = {
     &entry1,
@@ -63,8 +63,8 @@ CommEndpoint *config_entries[] = {
 
 SerialComm conf(config_entries, 3, &usb_comm);
 
-USBComm::new_line_handler new_line_handlers[] = {
-    {SerialComm::new_line_callback, &conf},
+USBComm::packet_handler packet_handlers[] = {
+    {SerialComm::packet_callback, &conf},
 };
 
 void control_panel_self_test() {
@@ -109,7 +109,7 @@ extern "C" void abvm_init() {
 
     encoder.reset();
     usb_comm.set_as_cdc_consumer();
-    usb_comm.set_new_line_handlers(new_line_handlers, 1);
+    usb_comm.set_packet_handlers(packet_handlers, 1);
 
     pressure_sensor.init();
     pressure_sensor.set_powerdown(false);
@@ -144,7 +144,7 @@ uint32_t debounce_intvl = 10;
 
 extern "C" void abvm_update() {
     controls.update();
-    conf.update(HAL_GetTick());
+    conf.update();
 
     if (millis() > last_motor + motor_interval) {
         motor.update();

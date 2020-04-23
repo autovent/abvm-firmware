@@ -2,6 +2,7 @@
 
 #include <string.h>
 
+#include "clock.h"
 #include "crc16.h"
 
 CommEndpoint::CommEndpoint(uint8_t id, void *const data_ptr, size_t size, bool read_only)
@@ -56,18 +57,16 @@ bool CommEndpoint::should_stream_out(uint32_t current_ms) {
 SerialComm::SerialComm(CommEndpoint **endpoints, size_t num_endpoints, USBComm *uc)
     : endpoints(endpoints), num_endpoints(num_endpoints), usb(uc) {}
 
-void SerialComm::new_line_callback(uint8_t *data, size_t len, void *arg) {
+void SerialComm::packet_callback(uint8_t *data, size_t len, void *arg) {
     ((SerialComm *)arg)->handle_incoming_message(data, len);
 }
 
 void SerialComm::handle_incoming_message(uint8_t *data, size_t len) {
     msgFrame f;
     CommError err = mk_frame(&f, data, len);
-    if (err == CommError::ERROR_BAD_FRAME) {
-        return;
-    }
-    if (err == CommError::ERROR_CRC) {
-        send_error_frame((uint8_t)CommError::ERROR_CRC);
+    if (err != CommError::ERROR_NONE) {
+        if (err == CommError::ERROR_BAD_FRAME) return;
+        send_error_frame((uint8_t)err);
         return;
     }
 
@@ -141,7 +140,7 @@ void SerialComm::handle_incoming_message(uint8_t *data, size_t len) {
                         resp_frame.header.flags = FLAG_ZERO_SIZE;
                         resp_frame.size = 0;
                     } else {
-                        uint8_t err = endpoints[i]->stream_out(resp_frame.data, resp_frame.size, 0);  // TODO: FIX!
+                        uint8_t err = endpoints[i]->stream_out(resp_frame.data, resp_frame.size, millis());
                         if (err) {
                             send_error_frame(err);
                             break;
@@ -162,7 +161,7 @@ void SerialComm::handle_incoming_message(uint8_t *data, size_t len) {
     }
 }
 
-void SerialComm::update(uint32_t current_ms) {
+void SerialComm::update() {
     msgFrame stream_frame = {
         header : {
             type : MSG_STREAM_RESP,
@@ -171,11 +170,11 @@ void SerialComm::update(uint32_t current_ms) {
     };
 
     for (size_t i = 0; i < num_endpoints; i++) {
-        if (endpoints[i]->should_stream_out(current_ms)) {
+        if (endpoints[i]->should_stream_out(millis())) {
             stream_frame.id = endpoints[i]->get_id();
             stream_frame.size = endpoints[i]->get_size();
 
-            uint8_t err = endpoints[i]->stream_out(stream_frame.data, stream_frame.size, current_ms);
+            uint8_t err = endpoints[i]->stream_out(stream_frame.data, stream_frame.size, millis());
 
             if (err) {
                 send_error_frame(err);

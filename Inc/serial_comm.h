@@ -47,9 +47,9 @@ class SerialComm {
 public:
     SerialComm(CommEndpoint **endpoints, size_t num_endpoints, USBComm *uc);
 
-    void update(uint32_t current_ms);
+    void update();
 
-    static void new_line_callback(uint8_t *data, size_t len, void *arg);
+    static void packet_callback(uint8_t *data, size_t len, void *arg);
 
 private:
     static constexpr uint8_t MAX_FRAME_DATA_SIZE = 32;
