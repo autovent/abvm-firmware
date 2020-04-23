@@ -8,7 +8,7 @@ VentilatorController::VentilatorController(IMotionPlanner *motion, Servo *motor,
       is_operational(false),
       next_rate_idx(0),
       next_tv_idx(0),
-      tidal_volume_settings{55, 62, 69, 76, 83, 95},
+      tidal_volume_settings{55, 62, 69, 76, 83, 90},
       rate_settings{8, 10, 12, 14, 16, 18},
       peak_pressure_limit_cmH2O(kDefaultPeakPressureLimit),
       pressure_sensor(pressure_sensor) {}

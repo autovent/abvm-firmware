@@ -73,7 +73,7 @@ constexpr float kOpenPosition_deg = 25;       // Change this to a value where th
                                               // the bag
 constexpr float kMinClosedPosition_deg = 40;  // Change this to a value where the servo has displaced the appropriate
                                               // amount.
-constexpr float kMaxClosedPosition_deg = 90;  // Change this to a value where the servo has displaced the appropriate
+constexpr float kMaxClosedPosition_deg = 88;  // Change this to a value where the servo has displaced the appropriate
                                               // amount.
 // I : E Inspiration to Expiration Ratio
 constexpr IERatio kIERatio = {1, 2};
