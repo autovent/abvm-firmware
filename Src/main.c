@@ -30,8 +30,6 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
-#include "usbd_core.h"
-
 #include "abvm.h"
 
 /* USER CODE END Includes */
@@ -93,20 +91,6 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-
-  GPIO_InitTypeDef init = {
-    .Pin = GPIO_PIN_12,
-    .Mode = GPIO_MODE_OUTPUT_PP,
-    .Pull = GPIO_NOPULL,
-    .Speed = GPIO_SPEED_FREQ_HIGH,
-  };
-
-  HAL_GPIO_Init(GPIOA, &init);
-
-  // drive D+ pin low to disable enumeration for a few milliseconds
-  // this allows for enumeration only when the processor is ready
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, GPIO_PIN_RESET);
-  HAL_Delay(100);
 
   /* USER CODE END SysInit */
 
