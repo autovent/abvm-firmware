@@ -1,3 +1,6 @@
+#ifndef ADS1231_H
+#define ADS1231_H
+
 #include "platform.h"
 
 class ADS1231 {
@@ -49,3 +52,5 @@ private:
     // See datasheet page 12
     static constexpr float convert_to_volts(int32_t x, float gain, float vref);
 };
+
+#endif
