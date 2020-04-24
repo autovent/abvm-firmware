@@ -8,6 +8,7 @@
 #include "config.h"
 #include "control_panel.h"
 #include "controls/trapezoidal_planner.h"
+#include "data_logger.h"
 #include "drivers/pin.h"
 #include "drv8873.h"
 #include "encoder.h"
@@ -49,9 +50,23 @@ LC064 eeprom(&hi2c1, 0);
 
 RecordStore record_store(&eeprom);
 
+
+TrapezoidalPlanner motion({.5, .5}, 10);
+
+Servo motor(1, &motor_driver, &encoder, kMotorParams, kMotorVelPidParams, kMotorVelLimits, kMotorPosPidParams,
+            kMotorPosLimits);
+
+VentilatorController vent(&motion, &motor);
+Pin homing_switch{LIMIT2_GPIO_Port, LIMIT2_Pin};
+HomingController home(&motor, &homing_switch);
+
 CommEndpoint hw_revision_endpoint(0, &HW_REVISION, sizeof(HW_REVISION), true);
+
+DataLogger logger(10, &pressure_sensor, &motor, &motor_driver, &vent);
+
 CommEndpoint *config_entries[] = {
-    &hw_revision_endpoint
+    &hw_revision_endpoint,
+    &logger,
 };
 
 SerialComm ser_comm(config_entries, sizeof(config_entries)/sizeof(config_entries[0]), &usb_comm);
@@ -87,15 +102,6 @@ void control_panel_self_test() {
     controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_LEFT, 0);
     controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_RIGHT, 0);
 }
-
-TrapezoidalPlanner motion({.5, .5}, 10);
-
-Servo motor(1, &motor_driver, &encoder, kMotorParams, kMotorVelPidParams, kMotorVelLimits, kMotorPosPidParams,
-            kMotorPosLimits);
-
-VentilatorController vent(&motion, &motor);
-Pin homing_switch{LIMIT2_GPIO_Port, LIMIT2_Pin};
-HomingController home(&motor, &homing_switch);
 
 extern "C" void abvm_init() {
     // BootLoader::set_next_boot(BootLoader::BOOT_SELECT_APP);
@@ -178,7 +184,7 @@ extern "C" void abvm_update() {
     //              "%1.0f,"
     //              "%1.0f,"
     //              "%lu\r\n",
-    //              msec_to_sec(HAL_GetTick()), psi_to_cmH2O(pressure), motor.velocity, motor.target_velocity,
+                //  msec_to_sec(HAL_GetTick()), psi_to_cmH2O(pressure), motor.velocity, motor.target_velocity,
     //              motor.position, motor.target_pos, motor_driver.get_current(), vent.get_rate(), vent.get_closed_pos(),
     //              vent.get_open_pos(), motor.faults.to_int());
     //     usb_comm.send((uint8_t *)data, strlen(data));

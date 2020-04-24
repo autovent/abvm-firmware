@@ -16,3 +16,12 @@
 id = 1
 size = 1
 format = "B"
+
+[data_logger]
+id = 10
+size = 44
+format = "ffffffffffL"
+subitems = [
+    "time", "pressure", "motor_velocity", "motor_target_vel", "motor_pos", "motor_target_pos",
+    "motor_current", "vent_rate", "vent_closed_pos", "vent_open_pos", "motor_faults"
+]
