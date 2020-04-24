@@ -129,6 +129,8 @@ extern "C" void abvm_init() {
     controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_LEFT, 1);
     controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_RIGHT, 1);
     home.start();
+
+    logger.set_streaming(20);
 }
 
 uint32_t last = 0;
