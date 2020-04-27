@@ -64,12 +64,12 @@ CommEndpoint hw_revision_endpoint(0, &HW_REVISION, sizeof(HW_REVISION), true);
 
 DataLogger logger(10, &pressure_sensor, &motor, &motor_driver, &vent);
 
-CommEndpoint *config_entries[] = {
+CommEndpoint *comm_endpoints[] = {
     &hw_revision_endpoint,
     &logger,
 };
 
-SerialComm ser_comm(config_entries, sizeof(config_entries)/sizeof(config_entries[0]), &usb_comm);
+SerialComm ser_comm(comm_endpoints, sizeof(config_entries)/sizeof(config_entries[0]), &usb_comm);
 
 USBComm::packet_handler packet_handlers[] = {
     {SerialComm::packet_callback, &ser_comm},
