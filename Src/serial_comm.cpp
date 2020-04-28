@@ -62,7 +62,7 @@ void SerialComm::packet_callback(uint8_t *data, size_t len, void *arg) {
 }
 
 void SerialComm::handle_incoming_message(uint8_t *data, size_t len) {
-    msgFrame f;
+    MsgFrame f;
     CommError err = mk_frame(&f, data, len);
     if (err != CommError::ERROR_NONE) {
         if (err == CommError::ERROR_BAD_FRAME) return;
@@ -76,7 +76,7 @@ void SerialComm::handle_incoming_message(uint8_t *data, size_t len) {
             processed = true;
             switch (f.header.type) {
                 case MSG_READ: {
-                    msgFrame resp_frame = {
+                    MsgFrame resp_frame = {
                         header : {
                             type : MSG_READ_RESP,
                             flags : 0,
@@ -104,7 +104,7 @@ void SerialComm::handle_incoming_message(uint8_t *data, size_t len) {
                         break;
                     }
 
-                    msgFrame resp_frame = {
+                    MsgFrame resp_frame = {
                         header : {
                             type : MSG_WRITE_RESP,
                             flags : FLAG_ZERO_SIZE,
@@ -127,7 +127,7 @@ void SerialComm::handle_incoming_message(uint8_t *data, size_t len) {
 
                     endpoints[i]->set_streaming(stream_interval);
 
-                    msgFrame resp_frame = {
+                    MsgFrame resp_frame = {
                         header : {
                             type : MSG_STREAM_RESP,
                             flags : 0,
@@ -162,7 +162,7 @@ void SerialComm::handle_incoming_message(uint8_t *data, size_t len) {
 }
 
 void SerialComm::update() {
-    msgFrame stream_frame = {
+    MsgFrame stream_frame = {
         header : {
             type : MSG_STREAM_RESP,
             flags : 0,
@@ -185,14 +185,14 @@ void SerialComm::update() {
     }
 }
 
-CommError SerialComm::mk_frame(msgFrame *f, uint8_t *data, size_t size) {
+CommError SerialComm::mk_frame(MsgFrame *f, uint8_t *data, size_t size) {
     size_t data_idx = 0;
 
     if (data[data_idx++] != START_BYTE) {
         return CommError::ERROR_BAD_FRAME;
     }
 
-    f->header = *(msgHeader *)&data[data_idx++];
+    f->header = *(MsgHeader *)&data[data_idx++];
     f->id = data[data_idx++];
 
     size_t frame_size;
@@ -223,11 +223,11 @@ CommError SerialComm::mk_frame(msgFrame *f, uint8_t *data, size_t size) {
     return CommError::ERROR_NONE;
 }
 
-void SerialComm::send_frame(msgFrame *f) {
+void SerialComm::send_frame(MsgFrame *f) {
     size_t buf_idx = 0;
 
     tx_buf[buf_idx++] = START_BYTE;
-    *(msgHeader *)&tx_buf[buf_idx++] = f->header;
+    *(MsgHeader *)&tx_buf[buf_idx++] = f->header;
     tx_buf[buf_idx++] = (uint8_t)f->id;
 
     if (!(f->header.flags & FLAG_ZERO_SIZE)) {
@@ -246,7 +246,7 @@ void SerialComm::send_frame(msgFrame *f) {
 }
 
 void SerialComm::send_error_frame(uint8_t err) {
-    msgFrame err_frame = {
+    MsgFrame err_frame = {
         header : {
             type : MSG_ERROR,
             flags : FLAG_ZERO_SIZE,

@@ -104,8 +104,6 @@ void control_panel_self_test() {
 }
 
 extern "C" void abvm_init() {
-    // BootLoader::set_next_boot(BootLoader::BOOT_SELECT_APP);
-
     encoder.reset();
     usb_comm.set_as_cdc_consumer();
     usb_comm.set_packet_handlers(packet_handlers, 1);
@@ -170,28 +168,6 @@ extern "C" void abvm_update() {
 
         last_motion = millis();
     }
-
-    // if (HAL_GetTick() > last + 20) {
-    //     float pressure = pressure_sensor.read();
-    //     static char data[128];
-    //     snprintf(data, sizeof(data),
-    //              "%1.3f,"
-    //              "%1.3f,"
-    //              "%1.3f,"
-    //              "%1.3f,"
-    //              "%1.3f,"
-    //              "%1.3f,"
-    //              "%1.3f,"
-    //              "%1.0f,"
-    //              "%1.0f,"
-    //              "%1.0f,"
-    //              "%lu\r\n",
-                //  msec_to_sec(HAL_GetTick()), psi_to_cmH2O(pressure), motor.velocity, motor.target_velocity,
-    //              motor.position, motor.target_pos, motor_driver.get_current(), vent.get_rate(), vent.get_closed_pos(),
-    //              vent.get_open_pos(), motor.faults.to_int());
-    //     usb_comm.send((uint8_t *)data, strlen(data));
-    //     last = HAL_GetTick();
-    // }
 
     if (controls.button_pressed_singleshot(ControlPanel::START_MODE_BTN)) {
         vent.is_operational = true;

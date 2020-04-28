@@ -65,7 +65,7 @@ private:
 
     uint8_t tx_buf[USBComm::MAX_PACKET_SIZE];
 
-    enum messageType {
+    enum MessageType {
         MSG_ERROR = 0,
         MSG_READ,
         MSG_READ_RESP,
@@ -75,22 +75,22 @@ private:
         MSG_STREAM_RESP,
     };
 
-    struct __attribute__((__packed__)) msgHeader {
+    struct __attribute__((__packed__)) MsgHeader {
         uint8_t type : 4;
         uint8_t flags : 4;
     };
 
-    struct __attribute__((__packed__)) msgFrame {
-        msgHeader header;
+    struct __attribute__((__packed__)) MsgFrame {
+        MsgHeader header;
         uint8_t id;
         uint8_t size;
         uint8_t data[MAX_FRAME_DATA_SIZE];
         uint16_t _crc;
     };
 
-    CommError mk_frame(msgFrame *f, uint8_t *data, size_t size);
+    CommError mk_frame(MsgFrame *f, uint8_t *data, size_t size);
 
-    void send_frame(msgFrame *f);
+    void send_frame(MsgFrame *f);
 
     void send_error_frame(uint8_t err);
 
