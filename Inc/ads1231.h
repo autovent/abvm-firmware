@@ -48,6 +48,7 @@ private:
     bool is_ready();
 
     void enable_spi(bool spi_on);
+    int32_t rejection_filter(int32_t next);
 
     // See datasheet page 12
     static constexpr float convert_to_volts(int32_t x, float gain, float vref);
