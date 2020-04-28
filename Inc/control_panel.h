@@ -3,30 +3,21 @@
 
 #include "drivers/pin.h"
 #include "platform.h"
+#include "ui/button.h"
 
 class ControlPanel {
 public:
-    ControlPanel(
-          // BUTTONS
-          GPIO_TypeDef *sw_start_mode_port, uint16_t sw_start_mode_pin, GPIO_TypeDef *sw_stop_port,
-          uint16_t sw_stop_pin, GPIO_TypeDef *sw_up_left_port, uint16_t sw_up_left_pin, GPIO_TypeDef *sw_dn_left_port,
-          uint16_t sw_dn_left_pin, GPIO_TypeDef *sw_up_right_port, uint16_t sw_up_right_pin,
-          GPIO_TypeDef *sw_dn_right_port, uint16_t sw_dn_right_pin,
+    ControlPanel(Pin *sw_start, Pin *sw_stop, Pin *sw_up_left, Pin *sw_dn_left, Pin *sw_up_right, Pin *sw_dn_right,
 
-          // STATUS LEDS
-          GPIO_TypeDef *led_status1_port, uint16_t led_status1_pin, GPIO_TypeDef *led_status2_port,
-          uint16_t led_status2_pin, GPIO_TypeDef *led_status3_port, uint16_t led_status3_pin,
-          GPIO_TypeDef *led_status4_port, uint16_t led_status4_pin,
+                 // Status Leds
+                 Pin *led_status1, Pin *led_status2, Pin *led_status3, Pin *led_status4,
 
-          // CHARLIEPLEXED BAR GRAPH LEDS
-          GPIO_TypeDef *led_bar_left_char1_port, uint16_t led_bar_left_char1_pin, GPIO_TypeDef *led_bar_left_char2_port,
-          uint16_t led_bar_left_char2_pin, GPIO_TypeDef *led_bar_left_char3_port, uint16_t led_bar_left_char3_pin,
-          GPIO_TypeDef *led_bar_right_char1_port, uint16_t led_bar_right_char1_pin,
-          GPIO_TypeDef *led_bar_right_char2_port, uint16_t led_bar_right_char2_pin,
-          GPIO_TypeDef *led_bar_right_char3_port, uint16_t led_bar_right_char3_pin,
+                 // Charlieplex bar graph
+                 Pin *led_bar_left_char1, Pin *led_bar_left_char2, Pin *led_bar_left_char3, Pin *led_bar_right_char1,
+                 Pin *led_bar_right_char2, Pin *led_bar_right_char3,
 
-          // BUZZER
-          TIM_HandleTypeDef *buzzer_timer, uint32_t buzzer_timer_channel);
+                 // BUZZER
+                 TIM_HandleTypeDef *buzzer_timer, uint32_t buzzer_timer_channel, uint32_t debounce_time_ms = 10);
 
     enum PanelButton {
         START_MODE_BTN,
@@ -58,16 +49,37 @@ public:
         BUZZER_C8,  // 4186Hz (~85dB) (default)
     };
 
+    struct BlinkState {
+        uint32_t time_setting_ms;
+        uint32_t last_change_ms;
+        bool is_on;
+
+        bool update();
+    };
+
     struct BarState {
         int level;
         int current;
+        BlinkState blink;
     };
 
-    bool button_pressed(PanelButton btn);
-    bool button_pressed_singleshot(PanelButton btn);
+    struct LedState {
+        bool is_on;
+        BlinkState blink;
+    };
+
+    void button_update(void);
+    static constexpr size_t num_buttons() {
+        return static_cast<size_t>(PanelButton::NUM_PANEL_BUTTONS);
+    }
+    Button const &get_button(PanelButton i) const;
+    Button *get_button_ptr(PanelButton i);
 
     void set_status_led(StatusLed led, bool val);
+    void set_status_led_blink(StatusLed led, uint32_t blink_time);
+
     void set_led_bar_graph(BarGraph bar, uint8_t level);
+    void set_led_bar_graph_blink(BarGraph bar, uint32_t blink_time);
 
     void set_buzzer_tone(BuzzerTone tone);
     void set_buzzer_volume(float volume);  // volume between 0 and 1
@@ -81,14 +93,13 @@ private:
     uint32_t last_charlie_update_ms;
 
     // BUTTONS
-    Pin buttons[NUM_PANEL_BUTTONS];
+    Button buttons[NUM_PANEL_BUTTONS];
 
     // STATUS LEDS
-    Pin led_status[4];
+    Pin *led_status[4];
 
     // CHARLIEPLEXED BAR GRAPH LEDS
-    Pin led_bar_left[3];
-    Pin led_bar_right[3];
+    Pin *led_bars[2][3];
 
     // BUZZER
     TIM_HandleTypeDef *buzzer_timer;
@@ -96,9 +107,9 @@ private:
 
     bool prev_panel_button_state[NUM_PANEL_BUTTONS];
 
+    LedState led_blink_states[4];
     BarState bar_states[2];
-
-    void charlieplex(Pin ios[3], int value);
+    void charlieplex(Pin *ios[3], int value);
 };
 
 #endif

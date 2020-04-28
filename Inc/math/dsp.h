@@ -3,6 +3,13 @@
 
 #include <math.h>
 
+constexpr float max(float x, float y) {
+    return (x > y) ? x : y;
+}
+constexpr float min(float x, float y) {
+    return (x < y) ? x : y;
+}
+
 constexpr float saturate(float val, float min, float max) {
     // clang-format off
     return (val < min) ? min 
@@ -22,4 +29,10 @@ inline float dt_rate_limit(float target, float current, float rate) {
     float dx = target - current;
     return (fabsf(dx) > rate) ? (current + signof(dx) * rate) : target;
 }
+
+template <typename T>
+constexpr T map(T x, T in_min, T in_max, T out_min, T out_max) {
+    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
 #endif

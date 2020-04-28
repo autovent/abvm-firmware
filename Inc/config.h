@@ -8,6 +8,7 @@
 #define CONFIG_LONG_SPIRIT_FINGERS
 
 enum class Modes {
+    FACTORY_TEST,
     CALIBRATION,
     VENTILATOR,
 };
@@ -30,8 +31,8 @@ constexpr Servo::Config kRobotZone_638312_16RPM = {515.63, 48};
 
 #if defined(MOTOR_GOBILDA_30RPM)
 constexpr Servo::Config kMotorParams = kGoBilda_YellowJacket_5202_0002_0188_30RPM;
-constexpr PID::Params kMotorVelPidParams = {3, .0, .0};
-constexpr PID::Params kMotorPosPidParams = {15, .1, .0};                         //.02};
+constexpr PID::Params kMotorVelPidParams = {2.8, .0, .0};
+constexpr PID::Params kMotorPosPidParams = {14.5, .1, .0};                         //.02};
 constexpr Range<float> kMotorVelLimits = {-30 * 0.104719755, 30 * 0.104719755};  // RPM to rads/sec
 constexpr Range<float> kMotorPosLimits = {0, deg_to_rad(95)};
 
@@ -57,28 +58,21 @@ constexpr int32_t kMaxBPM = 18;
 constexpr int32_t kSlowestBreathTime_ms = 1000 * 60 / kMinBPM;
 constexpr int32_t kFastestBreathTime_ms = 1000 * 60 / kMaxBPM;
 constexpr int32_t kPlateauTime_ms = 200;
+constexpr int32_t kFastOpenTime_ms = 100;
+constexpr float kDefaultPeakPressureLimit = 40;
+constexpr float kPeakPressureDisplayMin = 25;
+constexpr float kPeakPressureDisplayMax = 50;
+constexpr float kPlateauPressureDisplayMin = 15;
+constexpr float kPlateauPressureDisplayMax = 40;
+constexpr float kPeakPressureLimitIncrement = 5;
 
-#ifdef CONFIG_SHORT_SPIRIT_FINGERS
-constexpr float kIdlePositiong_deg = 0;
-
-constexpr float kOpenPosition_deg = 45;       // Change this to a value where the servo is just barely compressing
-                                              // the bag
-constexpr float kMinClosedPosition_deg = 60;  // Change this to a value where the servo has displaced the appropriate
-                                              // amount.
-constexpr float kMaxClosedPosition_deg = 88;  // Change this to a value where the servo has displaced the appropriate
-                                              // amount.
-#elif defined(CONFIG_LONG_SPIRIT_FINGERS)
 constexpr float kIdlePositiong_deg = 10;
-
 constexpr float kOpenPosition_deg = 25;       // Change this to a value where the servo is just barely compressing
                                               // the bag
 constexpr float kMinClosedPosition_deg = 40;  // Change this to a value where the servo has displaced the appropriate
                                               // amount.
 constexpr float kMaxClosedPosition_deg = 90;  // Change this to a value where the servo has displaced the appropriate
                                               // amount.
-
-#endif
-
 // I : E Inspiration to Expiration Ratio
 constexpr IERatio kIERatio = {1, 2};
 constexpr bool kInvertMotion = true;  // Change this is the motor is inverted. This will reflect it 180
