@@ -88,6 +88,10 @@ bool RecordStore::store(const char *name) {
     return store_entry(entry);
 }
 
+EEPROM<uint16_t, uint8_t> *RecordStore::get_eeprom() {
+    return eeprom;
+}
+
 RecordStore::Entry *RecordStore::find_entry_by_name(const char *name) {
     for (uint16_t i = 0; i < num_entries; i++) {
         if (strcmp(name, entries[i].name) == 0) {

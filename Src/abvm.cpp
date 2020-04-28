@@ -46,11 +46,6 @@ ControlPanel controls(SW_START_GPIO_Port, SW_START_Pin, SW_STOP_GPIO_Port, SW_ST
                       RATE_CHAR_1_GPIO_Port, RATE_CHAR_1_Pin, RATE_CHAR_2_GPIO_Port, RATE_CHAR_2_Pin,
                       RATE_CHAR_3_GPIO_Port, RATE_CHAR_3_Pin, &htim1, TIM_CHANNEL_1);
 
-LC064 eeprom(&hi2c1, 0);
-
-RecordStore record_store(&eeprom);
-
-
 TrapezoidalPlanner motion({.5, .5}, 10);
 
 Servo motor(1, &motor_driver, &encoder, kMotorParams, kMotorVelPidParams, kMotorVelLimits, kMotorPosPidParams,
@@ -60,16 +55,21 @@ VentilatorController vent(&motion, &motor);
 Pin homing_switch{LIMIT2_GPIO_Port, LIMIT2_Pin};
 HomingController home(&motor, &homing_switch);
 
+LC064 eeprom(&hi2c1, 0);
+RecordStore record_store(&eeprom);
+
 CommEndpoint hw_revision_endpoint(0, &HW_REVISION, sizeof(HW_REVISION), true);
 
 DataLogger logger(10, &pressure_sensor, &motor, &motor_driver, &vent);
+ConfigCommandRPC config_cmd(100, &record_store);
 
 CommEndpoint *comm_endpoints[] = {
     &hw_revision_endpoint,
     &logger,
+    &config_cmd,
 };
 
-SerialComm ser_comm(comm_endpoints, sizeof(config_entries)/sizeof(config_entries[0]), &usb_comm);
+SerialComm ser_comm(comm_endpoints, sizeof(comm_endpoints)/sizeof(comm_endpoints[0]), &usb_comm);
 
 USBComm::packet_handler packet_handlers[] = {
     {SerialComm::packet_callback, &ser_comm},
