@@ -13,6 +13,8 @@ public:
 
     size_t receive_line(uint8_t *data);
 
+    void purge();
+
     bool append(uint8_t *data, size_t len);
 
     void set_as_cdc_consumer();
@@ -24,10 +26,21 @@ public:
         bool result = send((uint8_t *)data, strlen(data));
         return result;
     }
+    
+    struct packet_handler {
+        void (*callback)(uint8_t *data, size_t len, void *arg);
+        void *arg;
+    };
+
+    void set_packet_handlers(packet_handler *handlers, size_t num_handlers);
+    
+    static constexpr size_t MAX_PACKET_SIZE = 64;
 
 private:
     static constexpr size_t BUFFER_SIZE = 16;
-    static constexpr size_t MAX_PACKET_SIZE = 64;
+
+    packet_handler *packet_handlers;
+    size_t num_packet_handlers;
 
     struct UsbData {
         size_t size;

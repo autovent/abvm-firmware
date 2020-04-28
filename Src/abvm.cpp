@@ -8,6 +8,7 @@
 #include "config.h"
 #include "control_panel.h"
 #include "controls/trapezoidal_planner.h"
+#include "data_logger.h"
 #include "drivers/pin.h"
 #include "drv8873.h"
 #include "encoder.h"
@@ -17,12 +18,15 @@
 #include "main.h"
 #include "record_store.h"
 #include "servo.h"
+#include "serial_comm.h"
 #include "spi.h"
 #include "tim.h"
 #include "ui/ui_v1.h"
 #include "usb_comm.h"
 #include "ventilator_controller.h"
 #include "factory/tests.h"
+
+uint8_t HW_REVISION = 1;
 
 ADS1231 pressure_sensor(ADC1_PWRDN_GPIO_Port, ADC1_PWRDN_Pin, &hspi1, ADC_SPI_MISO_GPIO_Port, ADC_SPI_MISO_Pin,
                         ADC_SPI_SCK_GPIO_Port, ADC_SPI_SCK_Pin, 1.0f / (6.8948 * .00054),
@@ -35,6 +39,11 @@ DRV8873 motor_driver(MC_SLEEP_GPIO_Port, MC_SLEEP_Pin, MC_DISABLE_GPIO_Port, MC_
 Encoder encoder(&htim4);
 
 USBComm usb_comm;
+
+TrapezoidalPlanner motion({.5, .5}, 10);
+
+Servo motor(1, &motor_driver, &encoder, kMotorParams, kMotorVelPidParams, kMotorVelLimits, kMotorPosPidParams,
+            kMotorPosLimits);
 
 Pin sw_start_pin{SW_START_GPIO_Port, SW_START_Pin};
 Pin sw_stop_pin{SW_STOP_GPIO_Port, SW_STOP_Pin};
@@ -58,24 +67,37 @@ ControlPanel controls(&sw_start_pin, &sw_stop_pin, &sw_vol_up_pin, &sw_vol_dn_pi
                       &vol_char_3_pin, &rate_char_1_pin, &rate_char_2_pin, &rate_char_3_pin, &htim1, TIM_CHANNEL_1);
 
 UI_V1 ui(&controls);
-LC064 eeprom(&hi2c1, 0);
-
-RecordStore record_store(&eeprom);
-
-TrapezoidalPlanner motion({.5, .5}, 10);
-
-Servo motor(1, &motor_driver, &encoder, kMotorParams, kMotorVelPidParams, kMotorVelLimits, kMotorPosPidParams,
-            kMotorPosLimits);
-
-Pin power_detect{MEASURE_12V_GPIO_Port, MEASURE_12V_Pin};
 
 VentilatorController vent(&motion, &motor);
 Pin homing_switch{LIMIT2_GPIO_Port, LIMIT2_Pin};
 HomingController home(&motor, &homing_switch);
 
+LC064 eeprom(&hi2c1, 0);
+RecordStore record_store(&eeprom);
+
+CommEndpoint hw_revision_endpoint(0, &HW_REVISION, sizeof(HW_REVISION), true);
+
+DataLogger logger(10, &pressure_sensor, &motor, &motor_driver, &vent);
+ConfigCommandRPC config_cmd(100, &record_store);
+
+CommEndpoint *comm_endpoints[] = {
+    &hw_revision_endpoint,
+    &logger,
+    &config_cmd,
+};
+
+SerialComm ser_comm(comm_endpoints, sizeof(comm_endpoints)/sizeof(comm_endpoints[0]), &usb_comm);
+
+USBComm::packet_handler packet_handlers[] = {
+    {SerialComm::packet_callback, &ser_comm},
+};
+
+Pin power_detect{MEASURE_12V_GPIO_Port, MEASURE_12V_Pin};
+
 extern "C" void abvm_init() {
     encoder.reset();
     usb_comm.set_as_cdc_consumer();
+    usb_comm.set_packet_handlers(packet_handlers, 1);
 
     pressure_sensor.init();
     pressure_sensor.set_powerdown(false);
@@ -101,6 +123,8 @@ extern "C" void abvm_init() {
     controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_LEFT, 1);
     controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_RIGHT, 1);
     home.start();
+
+    logger.set_streaming(20);
     ui.init();
 }
 
@@ -113,6 +137,7 @@ uint32_t motor_interval = 1;
 
 extern "C" void abvm_update() {
     controls.update();
+    ser_comm.update();
 
     if (millis() > last_motor + motor_interval) {
         motor.update();
@@ -138,34 +163,6 @@ extern "C" void abvm_update() {
         }
 
         last_motion = millis();
-    }
-
-    if (millis() > last + 40) {
-        float pressure = pressure_sensor.read();
-        static char data[128];
-        snprintf(data, sizeof(data),
-                 "%1.3f,"
-                 "%1.3f,"
-                 "%1.3f,"
-                 "%1.3f,"
-                 "%1.3f,"
-                 "%1.3f,"
-                 "%1.3f,"
-                 "%1.0f,"
-                 "%1.0f,"
-                 "%1.0f,"
-                 "%lu,"
-                 "%1.0f,"
-                 "%1.0f"
-                 "\r\n",
-                 msec_to_sec(millis()), psi_to_cmH2O(pressure), motor.velocity, motor.target_velocity, motor.position,
-                 motor.target_pos, motor_driver.get_current(), vent.get_rate(), vent.get_closed_pos(),
-                 vent.get_open_pos(), motor.faults.to_int(),
-                 vent.get_peak_pressure_cmH2O(),
-                 vent.get_plateau_pressure_cmH2O()
-                 );
-        usb_comm.send((uint8_t *)data, strlen(data));
-        last = millis();
     }
 
     ui.set_value(IUI::DisplayValue::TIDAL_VOLUME, vent.get_tv_idx());

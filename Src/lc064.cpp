@@ -61,6 +61,16 @@ bool LC064::allocate(uint16_t size, uint16_t *addr) {
     return false;
 }
 
+bool LC064::erase() {
+    uint8_t erase_buf[PAGE_SIZE] = {0};
+    bool success;
+    for (uint16_t addr = 0; addr < TOTAL_SIZE; addr += PAGE_SIZE) {
+        success = write(addr, erase_buf, PAGE_SIZE);
+        if (!success) return false;
+    }
+    return true;
+}
+
 bool LC064::ready() {
     volatile HAL_StatusTypeDef status = HAL_I2C_IsDeviceReady(hi2c, dev_addr, NUM_TEST_TRIALS, I2C_TIMEOUT);
     return status == HAL_OK;
