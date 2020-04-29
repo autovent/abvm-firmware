@@ -45,7 +45,7 @@ public:
     }
 
     inline float get_open_pos() {
-        return kOpenPosition_deg;
+        return kVentMotionConfig.open_pos_deg;
     }
 
     inline uint8_t get_rate_idx() {
@@ -63,7 +63,8 @@ public:
     }
 
     void increment_peak_pressure_limit_cmH2O(float x) {
-      peak_pressure_limit_cmH2O = saturate(peak_pressure_limit_cmH2O + x, kPeakPressureDisplayMin, kPeakPressureDisplayMax);
+      peak_pressure_limit_cmH2O = saturate(peak_pressure_limit_cmH2O + x,
+        kVentRespirationConfig.peak_pressure_display_min, kVentRespirationConfig.peak_pressure_display_max);
     }
 
 private:

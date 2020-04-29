@@ -52,7 +52,7 @@ public:
     static void packet_callback(uint8_t *data, size_t len, void *arg);
 
 private:
-    static constexpr uint8_t MAX_FRAME_DATA_SIZE = 32;
+    static constexpr uint8_t MAX_FRAME_DATA_SIZE = USBComm::MAX_PACKET_SIZE - 7;
 
     static constexpr uint8_t START_BYTE = 0x3F;
     static constexpr uint8_t END_BYTE = 0x0A;
@@ -75,12 +75,12 @@ private:
         MSG_STREAM_RESP,
     };
 
-    struct __attribute__((__packed__)) MsgHeader {
+    struct __packed __aligned(1) MsgHeader {
         uint8_t type : 4;
         uint8_t flags : 4;
     };
 
-    struct __attribute__((__packed__)) MsgFrame {
+    struct __packed __aligned(1) MsgFrame {
         MsgHeader header;
         uint8_t id;
         uint8_t size;

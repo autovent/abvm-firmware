@@ -10,21 +10,21 @@ VentilatorController::VentilatorController(IMotionPlanner *motion, Servo *motor)
       next_tv_idx(0),
       tidal_volume_settings{55, 62, 69, 76, 83, 95},
       rate_settings{8, 10, 12, 14, 16, 18} ,
-      peak_pressure_limit_cmH2O(kDefaultPeakPressureLimit) {}
+      peak_pressure_limit_cmH2O(kVentRespirationConfig.default_peak_pressure_limit) {}
 
 void VentilatorController::start() {
     motor->set_pos_deg(0);
     motor->set_mode(Servo::Mode::POSITION);
     state = State::GO_TO_IDLE;
 
-    motion->set_next({kIdlePositiong_deg, 0, kTimeToIdle_ms});
+    motion->set_next({kVentMotionConfig.idle_pos_deg, 0, kVentRespirationConfig.time_to_idle_ms});
     motor->set_pos_deg(motion->run(motor->position));
     is_operational = true;
 }
 
 void VentilatorController::stop() {
     state = State::GO_TO_IDLE;
-    motion->force_next({kIdlePositiong_deg, 0, kTimeToIdle_ms});
+    motion->force_next({kVentMotionConfig.idle_pos_deg, 0, kVentRespirationConfig.time_to_idle_ms});
     motor->set_pos_deg(motion->run(motion->get_pos()));
     current_peak_pressure_cmH2O = 0;
     last_peak_pressure_cmH2O = 0;
@@ -42,7 +42,7 @@ float VentilatorController::update(float pressure_cmH2O) {
 
     if (pressure_cmH2O >= peak_pressure_limit_cmH2O && state != State::INSPIRATION) {
         state = State::EXPIRATION;
-        motion->force_next({kOpenPosition_deg, 0, kFastOpenTime_ms});
+        motion->force_next({kVentMotionConfig.open_pos_deg, 0, kVentRespirationConfig.fast_open_time_ms});
         motor->set_pos_deg(motion->run(motion->get_pos()));
         is_fast_open = true;
     }
@@ -56,12 +56,12 @@ float VentilatorController::update(float pressure_cmH2O) {
             case State::IDLE:
                 if (is_operational) {
                     state = State::GO_TO_START;
-                    motion->set_next({kOpenPosition_deg, 0, kTimeToIdle_ms});
+                    motion->set_next({kVentMotionConfig.open_pos_deg, 0, kVentRespirationConfig.time_to_idle_ms});
                 }
                 break;
             case State::GO_TO_START:
                 state = State::INSPIRATION;
-                motion->set_next({kOpenPosition_deg, 0, kTimeToIdle_ms});
+                motion->set_next({kVentMotionConfig.open_pos_deg, 0, kVentRespirationConfig.time_to_idle_ms});
                 break;
             case State::INSPIRATION:
                 last_plateau_pressure = current_plateau_pressure;
@@ -79,27 +79,28 @@ float VentilatorController::update(float pressure_cmH2O) {
                 }
 
                 motion->set_next({tidal_volume_settings[current_tv_idx], 0,
-                                  kIERatio.inspiration_percent() * bpm_to_time_ms(rate_settings[current_rate_idx])});
+                                  kVentMotionConfig.ie_ratio.inspiration_percent() *
+                                  bpm_to_time_ms(rate_settings[current_rate_idx])});
                 break;
             case State::INSPIRATORY_HOLD:
                 state = State::EXPIRATION;
-                motion->set_next({tidal_volume_settings[current_tv_idx], 0, kPlateauTime_ms});
+                motion->set_next({tidal_volume_settings[current_tv_idx], 0, kVentRespirationConfig.plateau_time_ms});
                 break;
             case State::EXPIRATION: {
                 state = State::INSPIRATION;
-                uint32_t plateau_time = is_measure_plateau_cycle ? kPlateauTime_ms : 0;
+                uint32_t plateau_time = is_measure_plateau_cycle ? kVentRespirationConfig.plateau_time_ms : 0;
                 if (is_fast_open) {
-                    plateau_time = kFastOpenTime_ms;
+                    plateau_time = kVentRespirationConfig.fast_open_time_ms;
                     is_fast_open = false;
                 }
-                motion->set_next({kOpenPosition_deg, 0,
-                                  (kIERatio.expiration_percent() * bpm_to_time_ms(rate_settings[current_rate_idx])) -
-                                        plateau_time});
+                motion->set_next({kVentMotionConfig.open_pos_deg, 0,
+                                  (kVentMotionConfig.ie_ratio.expiration_percent() *
+                                  bpm_to_time_ms(rate_settings[current_rate_idx])) - plateau_time});
                 break;
             }
             case State::GO_TO_IDLE:
                 state = State::IDLE;
-                motion->set_next({kIdlePositiong_deg, 0, kTimeToIdle_ms});
+                motion->set_next({kVentMotionConfig.idle_pos_deg, 0, kVentRespirationConfig.time_to_idle_ms});
                 break;
             default:
                 break;
