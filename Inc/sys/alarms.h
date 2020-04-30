@@ -59,6 +59,8 @@ public:
                 return (Name)i;
             }
         }
+
+        return Name::NUM_ALARMS;
     }
 
 private:
