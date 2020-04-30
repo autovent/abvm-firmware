@@ -69,7 +69,7 @@ ControlPanel controls(&sw_start_pin, &sw_stop_pin, &sw_vol_up_pin, &sw_vol_dn_pi
 
 UI_V1 ui(&controls);
 
-VentilatorController vent(&motion, &motor);
+VentilatorController vent(&motion, &motor, &pressure_sensor);
 Pin homing_switch{LIMIT2_GPIO_Port, LIMIT2_Pin};
 HomingController home(&motor, &homing_switch);
 
