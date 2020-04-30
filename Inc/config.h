@@ -2,6 +2,8 @@
 #define CONFIG_H_
 #include "controls/pid.h"
 #include "math/conversions.h"
+#include "record_store.h"
+#include "serial_comm.h"
 #include "servo.h"
 
 #define MOTOR_GOBILDA_30RPM
@@ -78,5 +80,23 @@ constexpr float kMaxClosedPosition_deg = 88;  // Change this to a value where th
 // I : E Inspiration to Expiration Ratio
 constexpr IERatio kIERatio = {1, 2};
 constexpr bool kInvertMotion = true;  // Change this is the motor is inverted. This will reflect it 180
+
+class ConfigCommandRPC : public CommEndpoint {
+public:
+    explicit ConfigCommandRPC(uint8_t id, RecordStore *store);
+
+    uint8_t write(void *data, size_t size) override;
+    uint8_t read(void *data, size_t size) override;
+
+private:
+    static constexpr uint32_t CONFIG_SAVE_CMD  = 0x45564153; // ASCII "SAVE"
+    static constexpr uint32_t CONFIG_ERASE_CMD = 0x53415245; // ASCII "ERAS"
+    static constexpr uint32_t CONFIG_LOAD_CMD  = 0x44414f4c; // ASCII "LOAD"
+    static constexpr uint32_t CONFIG_RESET_CMD = 0x45534553; // ASCII "RESE"
+ 
+    static constexpr uint8_t INVALID_CMD_ERR = 0x10;
+
+    RecordStore *store;
+};
 
 #endif

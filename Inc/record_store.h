@@ -23,6 +23,8 @@ public:
     bool load(const char *name, bool force_load);
     bool store(const char *name);
 
+    EEPROM<uint16_t, uint8_t> *get_eeprom();
+
 private:
     static constexpr uint16_t MAX_BUFFER_SIZE_BYTES = 256;
     static constexpr uint16_t MAX_NUM_ENTRIES = 8;

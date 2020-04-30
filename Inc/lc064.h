@@ -15,6 +15,8 @@ public:
 
     bool allocate(uint16_t size, uint16_t *addr) override;
 
+    bool erase() override;
+
 private:
     static constexpr uint32_t I2C_TIMEOUT = 1000;
     static constexpr uint8_t NUM_TEST_TRIALS = 100;

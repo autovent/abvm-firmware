@@ -1,0 +1,27 @@
+# Endpoint descriptors look like this:
+# [endpoint_name]
+# id = numeric endpoint ID
+# size = endpoint size in bytes
+# format = format chars for packing and unpacking values
+# subitems = (optional) list of names given to sub-values
+#
+# EX:
+# [example_endpoint]
+# id = 1
+# size = 8
+# format = "BbLH"    # unsigned byte, signed byte, unsigned long, unsigned short
+# subitems = ["item1", "item2", "item3", "item4"]
+
+[hw_revision]
+id = 1
+size = 1
+format = "B"
+
+[data_logger]
+id = 10
+size = 44
+format = "ffffffffffL"
+subitems = [
+    "time", "pressure", "motor_velocity", "motor_target_vel", "motor_pos", "motor_target_pos",
+    "motor_current", "vent_rate", "vent_closed_pos", "vent_open_pos", "motor_faults"
+]
