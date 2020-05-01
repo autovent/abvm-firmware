@@ -31,8 +31,8 @@ constexpr uint32_t kIdleLoggingInterval = 1000;  // 1Hz
 constexpr uint32_t kRunningLoggingInterval = 50; // 20Hz
 
 ADS1231 pressure_sensor(ADC1_PWRDN_GPIO_Port, ADC1_PWRDN_Pin, &hspi1, ADC_SPI_MISO_GPIO_Port, ADC_SPI_MISO_Pin,
-                        ADC_SPI_SCK_GPIO_Port, ADC_SPI_SCK_Pin, 1.0f / (6.8948 * .00054),
-                        .045 + (1 / (6.8948 /*kPA/psi*/ * .00054)) * -0.00325f);
+                        ADC_SPI_SCK_GPIO_Port, ADC_SPI_SCK_Pin, kSensorConfig.pressure_params.m,
+                        kSensorConfig.pressure_params.b);
 
 DRV8873 motor_driver(MC_SLEEP_GPIO_Port, MC_SLEEP_Pin, MC_DISABLE_GPIO_Port, MC_DISABLE_Pin, MC_FAULT_GPIO_Port,
                      MC_FAULT_Pin, &htim2, TIM_CHANNEL_1, TIM_CHANNEL_3, &hspi2, MC_SPI_CS_GPIO_Port, MC_SPI_CS_Pin,
@@ -88,6 +88,7 @@ CommEndpoint motor_config_ep(0x65, &kMotorConfig, sizeof(kMotorConfig));
 CommEndpoint vent_app_config_ep(0x66, &kVentAppConfig, sizeof(kVentAppConfig));
 CommEndpoint vent_resp_config_ep(0x67, &kVentRespirationConfig, sizeof(kVentRespirationConfig));
 CommEndpoint vent_motion_config_ep(0x68, &kVentMotionConfig, sizeof(kVentMotionConfig));
+CommEndpoint sensor_config_ep(0x69, &kSensorConfig, sizeof(kSensorConfig));
 
 CommEndpoint *comm_endpoints[] = {
     &hw_revision_ep,
@@ -96,7 +97,8 @@ CommEndpoint *comm_endpoints[] = {
     &motor_config_ep,
     &vent_app_config_ep,
     &vent_resp_config_ep,
-    &vent_motion_config_ep
+    &vent_motion_config_ep,
+    &sensor_config_ep,
 };
 
 SerialComm ser_comm(comm_endpoints, sizeof(comm_endpoints)/sizeof(comm_endpoints[0]), &usb_comm);
@@ -150,9 +152,10 @@ extern "C" void abvm_init() {
     record_store.add_entry("MotorConfig", &kMotorConfig, sizeof(kMotorConfig), sizeof(kMotorConfig));
     record_store.add_entry("VentAppConfig", &kVentAppConfig, sizeof(kVentAppConfig), sizeof(kVentAppConfig));
     record_store.add_entry("VentRespConfig", &kVentRespirationConfig, sizeof(kVentRespirationConfig),
-                                     sizeof(kVentRespirationConfig));
+                           sizeof(kVentRespirationConfig));
     record_store.add_entry("VentMotionConfig", &kVentMotionConfig, sizeof(kVentMotionConfig),
-                                     sizeof(kVentMotionConfig));
+                           sizeof(kVentMotionConfig));
+    record_store.add_entry("SensorConfig", &kSensorConfig, sizeof(kSensorConfig), sizeof(kSensorConfig));
     if (!record_store.first_load()) {
         // TODO: handle load failure
     }

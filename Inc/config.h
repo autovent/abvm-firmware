@@ -1,6 +1,7 @@
 #ifndef CONFIG_H_
 #define CONFIG_H_
 #include "controls/pid.h"
+#include "drivers/sensor.h"
 #include "math/conversions.h"
 #include "record_store.h"
 #include "serial_comm.h"
@@ -78,6 +79,10 @@ extern struct __attribute__((__packed__)) VentMotionConfig {
     IERatio ie_ratio;           // I : E Inspiration to Expiration Ratio
     bool invert_motion;         // Change this if the motor is inverted. This will reflect it 180
 } kVentMotionConfig;
+
+extern struct __attribute__((__packed__)) SensorConfig {
+    ISensor::LinearParams pressure_params;
+} kSensorConfig;
 
 class ConfigCommandRPC : public CommEndpoint {
 public:

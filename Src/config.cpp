@@ -50,6 +50,10 @@ VentMotionConfig kVentMotionConfig = {
     .invert_motion = true,
 };
 
+SensorConfig kSensorConfig = {
+    .pressure_params = {(1.0f / (6.8948 * .00054)), (.045 + (1 / (6.8948 /*kPA/psi*/ * .00054)) * -0.00325f)},
+};
+
 ConfigCommandRPC::ConfigCommandRPC(uint8_t id, RecordStore *store) :
     CommEndpoint(id, NULL, sizeof(uint32_t)), store(store) {}
 
