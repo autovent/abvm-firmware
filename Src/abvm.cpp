@@ -26,6 +26,9 @@
 #include "ventilator_controller.h"
 #include "factory/tests.h"
 
+constexpr uint32_t kIdleLoggingInterval = 1000;  // 1Hz
+constexpr uint32_t kRunningLoggingInterval = 50; // 20Hz
+
 ADS1231 pressure_sensor(ADC1_PWRDN_GPIO_Port, ADC1_PWRDN_Pin, &hspi1, ADC_SPI_MISO_GPIO_Port, ADC_SPI_MISO_Pin,
                         ADC_SPI_SCK_GPIO_Port, ADC_SPI_SCK_Pin, 1.0f / (6.8948 * .00054),
                         -.09 + (1 / (6.8948 /*kPA/psi*/ * .00054)) * -0.00325f);
@@ -133,9 +136,21 @@ extern "C" void abvm_init() {
     controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_RIGHT, 1);
     home.start();
 
-    logger_ep.set_streaming(50);
+    logger_ep.set_streaming(kIdleLoggingInterval);
 
     ui.init();
+
+    eeprom.init();
+    record_store.init();
+    record_store.add_entry("MotorConfig", &kMotorConfig, sizeof(kMotorConfig), sizeof(kMotorConfig));
+    record_store.add_entry("VentAppConfig", &kVentAppConfig, sizeof(kVentAppConfig), sizeof(kVentAppConfig));
+    record_store.add_entry("VentRespConfig", &kVentRespirationConfig, sizeof(kVentRespirationConfig),
+                                     sizeof(kVentRespirationConfig));
+    record_store.add_entry("VentMotionConfig", &kVentMotionConfig, sizeof(kVentMotionConfig),
+                                     sizeof(kVentMotionConfig));
+    if (!record_store.first_load()) {
+        // TODO: handle load failure
+    }
 }
 
 uint32_t last_motor = 0;
@@ -192,6 +207,7 @@ extern "C" void abvm_update() {
             if (home.is_done() && !vent.is_running()) {
                 ui.set_audio_alert(UI_V1::AudioAlert::STARTING);
                 vent.start();
+                logger_ep.set_streaming(kRunningLoggingInterval);
                 controls.set_status_led(ControlPanel::STATUS_LED_2, true);
             } else if (vent.is_running()) {
                 ui.set_alarm(UI_V1::Alarm::SILENCE);
@@ -199,6 +215,7 @@ extern "C" void abvm_update() {
             break;
         case IUI::Event::STOP:
             vent.stop();
+            logger_ep.set_streaming(kIdleLoggingInterval);
             ui.set_audio_alert(UI_V1::AudioAlert::STOPPING);
             controls.set_status_led(ControlPanel::STATUS_LED_2, false);
             break;
