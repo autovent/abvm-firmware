@@ -29,7 +29,7 @@ struct IERatio {
     }
 };
 
-extern struct MotorConfig {
+extern struct __attribute__((__packed__)) MotorConfig {
     Servo::Config motor_params;
     PID::Params motor_vel_pid_params;
     PID::Params motor_pos_pid_params;
@@ -37,7 +37,7 @@ extern struct MotorConfig {
     Range<float> motor_pos_limits;  // rads
 } kMotorConfig;
 
-extern struct VentAppConfig {
+extern struct __attribute__((__packed__)) VentAppConfig {
     Modes mode;
     uint32_t current_update_period_ms;
     uint32_t position_update_period_ms;
@@ -46,7 +46,7 @@ extern struct VentAppConfig {
 
 // Configuration parameters
 // ! EDIT theses as needed
-extern struct VentResiprationConfig {
+extern struct __attribute__((__packed__)) VentResiprationConfig {
     uint32_t time_to_idle_ms;
     int32_t min_bpm;
     int32_t max_bpm;
@@ -69,7 +69,7 @@ extern struct VentResiprationConfig {
 
 } kVentRespirationConfig;
 
-extern struct VentMotionConfig {
+extern struct __attribute__((__packed__)) VentMotionConfig {
     float idle_pos_deg;
     float open_pos_deg;         // Change this to a value where the servo is just barely compressing the bag
     float min_closed_pos_deg;   // Change this to a value where the servo has displaced the appropriate amount.
@@ -90,8 +90,9 @@ private:
     static constexpr uint32_t CONFIG_ERASE_CMD = 0x53415245; // ASCII "ERAS"
     static constexpr uint32_t CONFIG_LOAD_CMD  = 0x44414f4c; // ASCII "LOAD"
     static constexpr uint32_t CONFIG_RESET_CMD = 0x45534553; // ASCII "RESE"
- 
+
     static constexpr uint8_t INVALID_CMD_ERR = 0x10;
+    static constexpr uint8_t CONFIG_ERR = 0x11;
 
     RecordStore *store;
 };
