@@ -57,7 +57,7 @@ uint8_t ConfigCommandRPC::write(void *data, size_t size) {
     uint8_t ret = 0;
     switch (*cmd_in) {
         case CONFIG_SAVE_CMD: {
-            if (store->store_all()) {
+            if (!store->store_all()) {
                 ret = CONFIG_ERR;
             }
             break;
