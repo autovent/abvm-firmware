@@ -92,12 +92,18 @@ void Servo::update() {
     int16_t counts = next_pos - last_pos;
 
     // TODO: replace with a tested filter library
-    position = .8 * position + .2 * to_rad_at_output(next_pos);
+    position = .9* position + .1 * to_rad_at_output(next_pos);
     velocity = .98 * velocity + .02 * to_rad_at_output(counts) / (period_ms / 1000.0f);  // rad / s <--- Filter this
+    i_measured = .98 *  i_measured + .02 * driver->get_current();
 
-    test_no_encoder_fault(counts);
+    // test_no_encoder_fault(counts);
     // test_wrong_direction();
     // test_excessive_pos_error();
+
+
+    if (i_measured > 7.0) {
+        faults.overcurrent = true;
+    }
 
     if (faults.no_encoder || faults.wrong_dir || faults.overcurrent || faults.excessive_pos_error) {
         command = 0;

@@ -40,8 +40,6 @@ void MX_I2C1_Init(void);
 
 /* USER CODE BEGIN Prototypes */
 
-void HAL_I2C_ClearBusyFlagErrata_2_14_7(I2C_HandleTypeDef *hi2c);
-
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus

@@ -56,6 +56,8 @@ public:
     float commanded_velocity = 0;
     Faults faults = {.no_encoder = false, .wrong_dir = false};
 
+    float i_measured;
+
 private:
     uint32_t period_ms;
     Mode mode;

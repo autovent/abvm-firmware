@@ -42,6 +42,7 @@ extern struct __attribute__((__packed__)) VentAppConfig {
     uint32_t current_update_period_ms;
     uint32_t position_update_period_ms;
     uint32_t measurement_update_period_ms;
+    uint32_t alarm_silence_time_ms;
 } kVentAppConfig;
 
 // Configuration parameters

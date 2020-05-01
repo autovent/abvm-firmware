@@ -24,6 +24,7 @@ VentAppConfig kVentAppConfig = {
     .current_update_period_ms = 2,   // Match the 50 freq of the servo motors
     .position_update_period_ms = 10,
     .measurement_update_period_ms = 100,
+    .alarm_silence_time_ms = 30000,
 };
 
 VentResiprationConfig kVentRespirationConfig = {

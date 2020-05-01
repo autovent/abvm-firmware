@@ -2,8 +2,9 @@
 #define ADS1231_H
 
 #include "platform.h"
+#include "drivers/sensor.h"
 
-class ADS1231 {
+class ADS1231 : public ISensor {
 public:
     ADS1231();
 
