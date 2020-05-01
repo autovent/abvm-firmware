@@ -1,6 +1,6 @@
 #include "ventilator_controller.h"
 
-VentilatorController::VentilatorController(IMotionPlanner *motion, Servo *motor)
+VentilatorController::VentilatorController(IMotionPlanner *motion, Servo *motor, ISensor *pressure_sensor)
     : motion(motion),
       motor(motor),
       state(State::GO_TO_IDLE),
@@ -8,9 +8,10 @@ VentilatorController::VentilatorController(IMotionPlanner *motion, Servo *motor)
       is_operational(false),
       next_rate_idx(0),
       next_tv_idx(0),
-      tidal_volume_settings{55, 62, 69, 76, 83, 95},
-      rate_settings{8, 10, 12, 14, 16, 18} ,
-      peak_pressure_limit_cmH2O(kDefaultPeakPressureLimit) {}
+      tidal_volume_settings{55, 62, 69, 76, 83, 90},
+      rate_settings{8, 10, 12, 14, 16, 18},
+      peak_pressure_limit_cmH2O(kDefaultPeakPressureLimit),
+      pressure_sensor(pressure_sensor) {}
 
 void VentilatorController::start() {
     motor->set_pos_deg(0);
@@ -31,7 +32,10 @@ void VentilatorController::stop() {
     is_operational = false;
 }
 
-float VentilatorController::update(float pressure_cmH2O) {
+float VentilatorController::update() {
+    // Filter the pressure sensor data
+    pressure_cmH2O = .5 * pressure_cmH2O + .5 * psi_to_cmH2O(pressure_sensor->read());
+
     if (pressure_cmH2O > current_peak_pressure_cmH2O) {
         current_peak_pressure_cmH2O = pressure_cmH2O;
     }
@@ -41,6 +45,13 @@ float VentilatorController::update(float pressure_cmH2O) {
     }
 
     if (pressure_cmH2O >= peak_pressure_limit_cmH2O && state != State::INSPIRATION) {
+        state = State::EXPIRATION;
+        motion->force_next({kOpenPosition_deg, 0, kFastOpenTime_ms});
+        motor->set_pos_deg(motion->run(motion->get_pos()));
+        is_fast_open = true;
+    }
+
+    if (motor->i_measured > 4.5 && state != State::INSPIRATION) {
         state = State::EXPIRATION;
         motion->force_next({kOpenPosition_deg, 0, kFastOpenTime_ms});
         motor->set_pos_deg(motion->run(motion->get_pos()));

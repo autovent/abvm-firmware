@@ -63,7 +63,7 @@ float TrapezoidalPlanner::run(float pos, float vel) {
             decel = -v_max / t_counts_decel;
 
             v_last = 0;
-            p_last = pos;
+            p_last = p_last;
 
             t_counts_total = 0;
 

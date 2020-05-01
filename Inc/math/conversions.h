@@ -17,3 +17,5 @@ constexpr float psi_to_cmH2O(float x) {
 constexpr float msec_to_sec(float x) {
     return x / 1000.0f;
 }
+
+constexpr float  rad_per_sec_to_rpm(float x) { return x* 9.5493; }

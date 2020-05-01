@@ -31,12 +31,14 @@ constexpr Servo::Config kGoBilda_YellowJacket_5202_0002_0188_30RPM = {188, 28};
 
 constexpr Servo::Config kRobotZone_638312_16RPM = {515.63, 48};
 
+constexpr uint32_t kSilenceTime_ms = 30000;
+
 #if defined(MOTOR_GOBILDA_30RPM)
 constexpr Servo::Config kMotorParams = kGoBilda_YellowJacket_5202_0002_0188_30RPM;
-constexpr PID::Params kMotorVelPidParams = {2.8, .0, .0};
-constexpr PID::Params kMotorPosPidParams = {14.5, .1, .0};                         //.02};
-constexpr Range<float> kMotorVelLimits = {-30 * 0.104719755, 30 * 0.104719755};  // RPM to rads/sec
-constexpr Range<float> kMotorPosLimits = {0, deg_to_rad(95)};
+constexpr PID::Params kMotorVelPidParams = {3, .1, .002};
+constexpr PID::Params kMotorPosPidParams = {14, .2, 0.01};                         //.02};
+constexpr Range<float> kMotorVelLimits = {-28 * 0.104719755, 28 * 0.104719755};  // RPM to rads/sec
+constexpr Range<float> kMotorPosLimits = {0, deg_to_rad(90)};
 
 #elif defined(MOTOR_ROBOTZONE_16RPM)
 constexpr Servo::Config kMotorParams = kRobotZone_638312_16RPM;
@@ -73,7 +75,7 @@ constexpr float kOpenPosition_deg = 25;       // Change this to a value where th
                                               // the bag
 constexpr float kMinClosedPosition_deg = 40;  // Change this to a value where the servo has displaced the appropriate
                                               // amount.
-constexpr float kMaxClosedPosition_deg = 90;  // Change this to a value where the servo has displaced the appropriate
+constexpr float kMaxClosedPosition_deg = 88;  // Change this to a value where the servo has displaced the appropriate
                                               // amount.
 // I : E Inspiration to Expiration Ratio
 constexpr IERatio kIERatio = {1, 2};
