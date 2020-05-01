@@ -54,22 +54,30 @@ ConfigCommandRPC::ConfigCommandRPC(uint8_t id, RecordStore *store) :
 
 uint8_t ConfigCommandRPC::write(void *data, size_t size) {
     uint32_t *cmd_in = (uint32_t*)data;
+    uint8_t ret = 0;
     switch (*cmd_in) {
         case CONFIG_SAVE_CMD: {
-            store->store_all();
+            if (store->store_all()) {
+                ret = CONFIG_ERR;
+            }
             break;
         }
         case CONFIG_ERASE_CMD: {
-            store->get_eeprom()->erase();
+            if (!store->get_eeprom()->erase()) {
+                ret = CONFIG_ERR;
+            }
             break;
         }
         case CONFIG_LOAD_CMD: {
-            store->load_all();
+            if (!store->load_all()) {
+                ret = CONFIG_ERR;
+            }
             break;
         }
         case CONFIG_RESET_CMD: {
-            store->get_eeprom()->erase();
-            store->first_load();
+            if (!store->get_eeprom()->erase() || !store->first_load()) {
+                ret = CONFIG_ERR;
+            }
             break;
         }
         default: {
@@ -77,6 +85,7 @@ uint8_t ConfigCommandRPC::write(void *data, size_t size) {
             break;
         }
     }
+    return ret;
 }
 
 uint8_t ConfigCommandRPC::read(void *data, size_t size) {
