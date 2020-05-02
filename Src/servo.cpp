@@ -5,10 +5,11 @@ uint32_t Servo::Faults::to_int() {
            ((excessive_pos_error ? 1 : 0) << 3);
 }
 
-Servo::Servo(uint32_t update_period_ms, DRV8873 *driver, Encoder *encoder, Config cfg, PID::Params vel_pid_params,
+Servo::Servo(uint32_t update_period_ms, DRV8873 *driver, Encoder *encoder,Pin *limit_switch, Config cfg, PID::Params vel_pid_params,
              Range<float> vel_limits, PID::Params pos_pid_params, Range<float> pos_limits, bool is_inverted)
     : driver(driver),
       encoder(encoder),
+      limit_switch(limit_switch),
       config(cfg),
       period_ms(update_period_ms),
       vel_pid(vel_pid_params, update_period_ms / 1000.0),
@@ -103,7 +104,7 @@ void Servo::update() {
     // TODO: replace with a tested filter library
     position = .9* position + .1 * to_rad_at_output(next_pos);
     velocity = .98 * velocity + .02 * to_rad_at_output(counts) / (period_ms / 1000.0f);  // rad / s <--- Filter this
-    i_measured = .98 *  i_measured + .02 * driver->get_current();
+    i_measured = .98 * i_measured + .02 * driver->get_current();
 
     test_no_encoder_fault(counts);
     test_wrong_direction();
@@ -135,12 +136,19 @@ void Servo::update() {
             command = vel_pid.update(commanded_velocity, velocity);
 
             // If the limit switch is depressed don't command any more movement into it. Allow movement away.
+            if (limit_switch_pressed() && command < 0) {
+                command = 0;
+            }
+
+
             driver->set_pwm(command);
         }
     }
 
     last_pos = next_pos;
 }
+
+bool Servo::limit_switch_pressed() { return !limit_switch->read(); }
 
 void Servo::set_mode(Mode m) {
     mode = m;
