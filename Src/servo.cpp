@@ -123,16 +123,18 @@ void Servo::update() {
         driver->set_pwm(0);
     } else {
         if (mode == Mode::POSITION) {
+            commanded_pos = commanded_pos*.2 + target_pos *.8;
             commanded_pos = pos_limits.saturate(target_pos);
 
             set_velocity(pos_pid.update(commanded_pos, position));
         }
 
         if (mode == Mode::VELOCITY || mode == Mode::POSITION) {
-            commanded_velocity = dt_rate_limit(target_velocity, commanded_velocity, .05);
+            commanded_velocity = commanded_velocity*.2 + target_velocity *.8;
             commanded_velocity = vel_limits.saturate(commanded_velocity);
             command = vel_pid.update(commanded_velocity, velocity);
 
+            // If the limit switch is depressed don't command any more movement into it. Allow movement away.
             driver->set_pwm(command);
         }
     }
