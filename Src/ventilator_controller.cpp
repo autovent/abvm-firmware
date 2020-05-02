@@ -125,6 +125,7 @@ float VentilatorController::update() {
 void VentilatorController::reset() {
     is_operational = false;
     state = State::GO_TO_IDLE;
+    motor->reset();
 }
 
 float VentilatorController::get_peak_pressure_cmH2O() {
