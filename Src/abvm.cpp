@@ -18,33 +18,17 @@
 #include "lc064.h"
 #include "main.h"
 #include "record_store.h"
-#include "servo.h"
 #include "serial_comm.h"
+#include "servo.h"
 #include "spi.h"
+#include "sys/alarms.h"
 #include "tim.h"
 #include "ui/ui_v1.h"
 #include "usb_comm.h"
 #include "ventilator_controller.h"
-#include "sys/alarms.h"
 
 uint8_t HW_REVISION = 1;
 
-ADS1231 pressure_sensor(ADC1_PWRDN_GPIO_Port, ADC1_PWRDN_Pin, &hspi1, ADC_SPI_MISO_GPIO_Port, ADC_SPI_MISO_Pin,
-                        ADC_SPI_SCK_GPIO_Port, ADC_SPI_SCK_Pin, 1.0f / (6.8948 * .00054),
-                        .045 + (1 / (6.8948 /*kPA/psi*/ * .00054)) * -0.00325f);
-
-DRV8873 motor_driver(MC_SLEEP_GPIO_Port, MC_SLEEP_Pin, MC_DISABLE_GPIO_Port, MC_DISABLE_Pin, MC_FAULT_GPIO_Port,
-                     MC_FAULT_Pin, &htim2, TIM_CHANNEL_1, TIM_CHANNEL_3, &hspi2, MC_SPI_CS_GPIO_Port, MC_SPI_CS_Pin,
-                     false);
-
-Encoder encoder(&htim4);
-
-USBComm usb_comm;
-
-TrapezoidalPlanner motion({.4, .4}, 10);
-
-Servo motor(1, &motor_driver, &encoder, kMotorParams, kMotorVelPidParams, kMotorVelLimits, kMotorPosPidParams,
-            kMotorPosLimits);
 
 Pin sw_start_pin{SW_START_GPIO_Port, SW_START_Pin};
 Pin sw_stop_pin{SW_STOP_GPIO_Port, SW_STOP_Pin};
@@ -62,6 +46,24 @@ Pin vol_char_3_pin{VOL_CHAR_3_GPIO_Port, VOL_CHAR_3_Pin};
 Pin rate_char_1_pin{RATE_CHAR_1_GPIO_Port, RATE_CHAR_1_Pin};
 Pin rate_char_2_pin{RATE_CHAR_2_GPIO_Port, RATE_CHAR_2_Pin};
 Pin rate_char_3_pin{RATE_CHAR_3_GPIO_Port, RATE_CHAR_3_Pin};
+Pin homing_switch{LIMIT2_GPIO_Port, LIMIT2_Pin};
+
+ADS1231 pressure_sensor(ADC1_PWRDN_GPIO_Port, ADC1_PWRDN_Pin, &hspi1, ADC_SPI_MISO_GPIO_Port, ADC_SPI_MISO_Pin,
+                        ADC_SPI_SCK_GPIO_Port, ADC_SPI_SCK_Pin, 1.0f / (6.8948 * .00054),
+                        .045 + (1 / (6.8948 /*kPA/psi*/ * .00054)) * -0.00325f);
+
+DRV8873 motor_driver(MC_SLEEP_GPIO_Port, MC_SLEEP_Pin, MC_DISABLE_GPIO_Port, MC_DISABLE_Pin, MC_FAULT_GPIO_Port,
+                     MC_FAULT_Pin, &htim2, TIM_CHANNEL_1, TIM_CHANNEL_3, &hspi2, MC_SPI_CS_GPIO_Port, MC_SPI_CS_Pin,
+                     false);
+
+Encoder encoder(&htim4);
+
+USBComm usb_comm;
+
+TrapezoidalPlanner motion({.4, .4}, 10);
+
+Servo motor(1, &motor_driver, &encoder, &homing_switch, kMotorParams, kMotorVelPidParams, kMotorVelLimits, kMotorPosPidParams,
+            kMotorPosLimits);
 
 ControlPanel controls(&sw_start_pin, &sw_stop_pin, &sw_vol_up_pin, &sw_vol_dn_pin, &sw_rate_up_pin, &sw_rate_dn_pin,
                       &led_power_pin, &led_fault_pin, &led_in_pin, &led_out_pin, &vol_char_1_pin, &vol_char_2_pin,
@@ -70,8 +72,7 @@ ControlPanel controls(&sw_start_pin, &sw_stop_pin, &sw_vol_up_pin, &sw_vol_dn_pi
 UI_V1 ui(&controls);
 
 VentilatorController vent(&motion, &motor, &pressure_sensor);
-Pin homing_switch{LIMIT2_GPIO_Port, LIMIT2_Pin};
-HomingController home(&motor, &homing_switch);
+HomingController home(&motor);
 
 LC064 eeprom(&hi2c1, 0);
 RecordStore record_store(&eeprom);
@@ -82,15 +83,15 @@ DataLogger logger(10, &pressure_sensor, &motor, &motor_driver, &vent);
 ConfigCommandRPC config_cmd(100, &record_store);
 
 CommEndpoint *comm_endpoints[] = {
-    &hw_revision_endpoint,
-    &logger,
-    &config_cmd,
+      &hw_revision_endpoint,
+      &logger,
+      &config_cmd,
 };
 
-SerialComm ser_comm(comm_endpoints, sizeof(comm_endpoints)/sizeof(comm_endpoints[0]), &usb_comm);
+SerialComm ser_comm(comm_endpoints, sizeof(comm_endpoints) / sizeof(comm_endpoints[0]), &usb_comm);
 
 USBComm::packet_handler packet_handlers[] = {
-    {SerialComm::packet_callback, &ser_comm},
+      {SerialComm::packet_callback, &ser_comm},
 };
 
 Pin power_detect{MEASURE_12V_GPIO_Port, MEASURE_12V_Pin};
@@ -170,60 +171,69 @@ extern "C" void abvm_update() {
         alarms.set(Alarms::LOSS_OF_POWER, !power_detect.read());
         alarms.set(Alarms::MOTION_FAULT, motor.faults.to_int());
         alarms.set(Alarms::OVER_CURRENT, motor_driver.get_fault());
-
         last_motion = millis();
     }
 
-    ui.set_alarm(alarms);
-    ui.set_value(IUI::DisplayValue::TIDAL_VOLUME, vent.get_tv_idx());
-    ui.set_value(IUI::DisplayValue::RESPIRATORY_RATE, vent.get_rate_idx());
-    ui.set_value(IUI::DisplayValue::PEAK_PRESSURE, vent.get_peak_pressure_cmH2O());
-    ui.set_value(IUI::DisplayValue::PLATEAU_PRESSURE, vent.get_plateau_pressure_cmH2O());
-    ui.set_value(IUI::DisplayValue::PEAK_PRESSURE_ALARM, vent.get_peak_pressure_limit_cmH2O());
+    if (millis() > last + 20) {
+        switch (ui.update()) {
+            case IUI::Event::START:
+                if (alarms.is_any_alarmed()) {
+                    ui.silence();
+                } else if (home.is_done() && !vent.is_running()) {
+                    ui.set_audio_alert(UI_V1::AudioAlert::STARTING);
+                    vent.start();
+                    controls.set_status_led(ControlPanel::STATUS_LED_2, true);
+                }
+                break;
+            case IUI::Event::STOP:
+                if (alarms.is_any_alarmed()) {
+                    vent.reset();
+                    vent.stop();
+                    home.start();
+                } else {
+                    vent.stop();
+                    ui.set_audio_alert(UI_V1::AudioAlert::STOPPING);
+                    controls.set_status_led(ControlPanel::STATUS_LED_2, false);
+                }
+                break;
+            case IUI::Event::TIDAL_VOLUME_UP:
+                vent.bump_tv(1);
+                break;
+            case IUI::Event::TIDAL_VOLUME_DOWN:
+                vent.bump_tv(-1);
+                break;
+            case IUI::Event::RESPIRATORY_RATE_UP:
+                vent.bump_rate(1);
+                break;
+            case IUI::Event::RESPIRATORY_RATE_DOWN:
+                vent.bump_rate(-1);
+                break;
+            case IUI::Event::PRESSURE_LIMIT_UP:
+                vent.increment_peak_pressure_limit_cmH2O(kPeakPressureLimitIncrement);
+                break;
 
-    switch (ui.update()) {
-        case IUI::Event::START:
-            if (alarms.is_any_alarmed()) {
-                ui.silence();
-            } else if (home.is_done() && !vent.is_running()) {
-                ui.set_audio_alert(UI_V1::AudioAlert::STARTING);
-                vent.start();
-                controls.set_status_led(ControlPanel::STATUS_LED_2, true);
-            }
-            break;
-        case IUI::Event::STOP:
-            vent.stop();
-            ui.set_audio_alert(UI_V1::AudioAlert::STOPPING);
-            controls.set_status_led(ControlPanel::STATUS_LED_2, false);
-            break;
-        case IUI::Event::TIDAL_VOLUME_UP:
-            vent.bump_tv(1);
-            break;
-        case IUI::Event::TIDAL_VOLUME_DOWN:
-            vent.bump_tv(-1);
-            break;
-        case IUI::Event::RESPIRATORY_RATE_UP:
-            vent.bump_rate(1);
-            break;
-        case IUI::Event::RESPIRATORY_RATE_DOWN:
-            vent.bump_rate(-1);
-            break;
-        case IUI::Event::PRESSURE_LIMIT_UP:
-            vent.increment_peak_pressure_limit_cmH2O(kPeakPressureLimitIncrement);
-            break;
+            case IUI::Event::PRESSURE_LIMIT_DOWN:
+                vent.increment_peak_pressure_limit_cmH2O(-kPeakPressureLimitIncrement);
+                break;
 
-        case IUI::Event::PRESSURE_LIMIT_DOWN:
-            vent.increment_peak_pressure_limit_cmH2O(-kPeakPressureLimitIncrement);
-            break;
+            case IUI::Event::SILENCE_ALARM:
+                break;
 
-        case IUI::Event::SILENCE_ALARM:
-            break;
+            case IUI::Event::GO_TO_BOOTLOADER:
+                // TODO: Fill in this implementation
+                BootLoader::start_bootloader();
+                break;
+            default:
+                break;
+        }
 
-        case IUI::Event::GO_TO_BOOTLOADER:
-            // TODO: Fill in this implementation
-            BootLoader::start_bootloader();
-            break;
-        default:
-            break;
+        ui.set_alarm(alarms);
+        ui.set_value(IUI::DisplayValue::TIDAL_VOLUME, vent.get_tv_idx());
+        ui.set_value(IUI::DisplayValue::RESPIRATORY_RATE, vent.get_rate_idx());
+        ui.set_value(IUI::DisplayValue::PEAK_PRESSURE, vent.get_peak_pressure_cmH2O());
+        ui.set_value(IUI::DisplayValue::PLATEAU_PRESSURE, vent.get_plateau_pressure_cmH2O());
+        ui.set_value(IUI::DisplayValue::PEAK_PRESSURE_ALARM, vent.get_peak_pressure_limit_cmH2O());
+
+        last = millis();
     }
 }
