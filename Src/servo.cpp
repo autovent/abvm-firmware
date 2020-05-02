@@ -100,9 +100,8 @@ void Servo::update() {
     // test_wrong_direction();
     // test_excessive_pos_error();
 
-
-    if (i_measured > 7.0) {
-        faults.overcurrent = true;
+    if (fabsf(i_measured) >= 5.0) {
+        if (++over_current_fault_counter > 200) {
     }
 
     if (faults.no_encoder || faults.wrong_dir || faults.overcurrent || faults.excessive_pos_error) {

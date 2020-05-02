@@ -145,7 +145,7 @@ public:
 
     void set_disabled(bool disable);
     void set_sleep(bool sleep);
-
+    float get_sign_of_current() const;
     bool get_fault();
 
     uint8_t get_reg(uint8_t reg_addr);
@@ -179,6 +179,8 @@ private:
     uint32_t *current_raw_dma;
 
     uint8_t status_reg;
+
+    bool pwm_direction;
 
     uint8_t run_spi_transaction(bool read, uint8_t reg_addr, uint8_t data);
 };
