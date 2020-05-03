@@ -2,6 +2,8 @@
 #define CONFIG_H_
 #include "controls/pid.h"
 #include "math/conversions.h"
+#include "math/ratio.h"
+#include "math/linear_fit.h"
 #include "record_store.h"
 #include "serial_comm.h"
 #include "servo.h"
@@ -9,77 +11,65 @@
 #define MOTOR_GOBILDA_30RPM
 #define CONFIG_LONG_SPIRIT_FINGERS
 
-enum class Modes {
+enum class Modes : uint8_t {
     FACTORY_TEST,
     CALIBRATION,
     VENTILATOR,
 };
 
-struct IERatio {
-    float inspiration;
-    float expiration;
+extern uint8_t kHardwareRev;
 
-    inline const float inspiration_percent() const {
-        return inspiration / (inspiration + expiration);
-    }
-    inline const float expiration_percent() const {
-        return expiration / (inspiration + expiration);
-    }
-};
+extern struct __attribute__((__packed__)) MotorConfig {
+    Servo::Config motor_params;
+    PID::Params motor_vel_pid_params;
+    PID::Params motor_pos_pid_params;
+    Range<float> motor_vel_limits;  // rads/s
+    Range<float> motor_pos_limits;  // rads
+} kMotorConfig;
 
-constexpr Servo::Config kGoBilda_YellowJacket_5202_0002_0188_30RPM = {188, 28};
-
-constexpr Servo::Config kRobotZone_638312_16RPM = {515.63, 48};
-
-constexpr uint32_t kSilenceTime_ms = 30000;
-
-#if defined(MOTOR_GOBILDA_30RPM)
-constexpr Servo::Config kMotorParams = kGoBilda_YellowJacket_5202_0002_0188_30RPM;
-constexpr PID::Params kMotorVelPidParams = {3, .1, .002};
-constexpr PID::Params kMotorPosPidParams = {14, .2, 0.01};                         //.02};
-constexpr Range<float> kMotorVelLimits = {-28 * 0.104719755, 28 * 0.104719755};  // RPM to rads/sec
-constexpr Range<float> kMotorPosLimits = {0, deg_to_rad(90)};
-
-#elif defined(MOTOR_ROBOTZONE_16RPM)
-constexpr Servo::Config kMotorParams = kRobotZone_638312_16RPM;
-constexpr PID::Params kMotorVelPidParams = {6.5, .05, 0};
-constexpr PID::Params kMotorPosPidParams = {16, 0, 0.0};
-constexpr Range kMotorVelLimits = {-15 * 0.104719755, 15 * 0.104719755};  // RPM to rads/sec
-constexpr Range kMotorPosLimits = {0, deg_to_rad(89)};
-#endif
-
-constexpr Modes mode = Modes::VENTILATOR;
-
-constexpr uint32_t kCurrentUpdatePeriod_ms = 2;
-constexpr uint32_t kPositionUpdate_ms = 10;  // Match the 50 freq of the servo motors
-constexpr uint32_t kMeasurementUpdatePeriod_ms = 100;
+extern struct __attribute__((__packed__)) VentAppConfig {
+    Modes mode;
+    uint32_t current_update_period_ms;
+    uint32_t position_update_period_ms;
+    uint32_t measurement_update_period_ms;
+    uint32_t alarm_silence_time_ms;
+} kVentAppConfig;
 
 // Configuration parameters
 // ! EDIT theses as needed
-constexpr uint32_t kTimeToIdle_ms = 500;
-constexpr int32_t kMinBPM = 8;
-constexpr int32_t kMaxBPM = 18;
-constexpr int32_t kSlowestBreathTime_ms = 1000 * 60 / kMinBPM;
-constexpr int32_t kFastestBreathTime_ms = 1000 * 60 / kMaxBPM;
-constexpr int32_t kPlateauTime_ms = 200;
-constexpr int32_t kFastOpenTime_ms = 100;
-constexpr float kDefaultPeakPressureLimit = 40;
-constexpr float kPeakPressureDisplayMin = 25;
-constexpr float kPeakPressureDisplayMax = 50;
-constexpr float kPlateauPressureDisplayMin = 15;
-constexpr float kPlateauPressureDisplayMax = 40;
-constexpr float kPeakPressureLimitIncrement = 5;
+extern struct __attribute__((__packed__)) VentResiprationConfig {
+    uint32_t time_to_idle_ms;
+    int32_t min_bpm;
+    int32_t max_bpm;
+    int32_t plateau_time_ms;
+    int32_t fast_open_time_ms;
+    float default_peak_pressure_limit;
+    float peak_pressure_display_min;
+    float peak_pressure_display_max;
+    float plateau_pressure_display_min;
+    float plateau_pressure_display_max;
+    float peak_pressure_limit_increment;
 
-constexpr float kIdlePositiong_deg = 10;
-constexpr float kOpenPosition_deg = 25;       // Change this to a value where the servo is just barely compressing
-                                              // the bag
-constexpr float kMinClosedPosition_deg = 40;  // Change this to a value where the servo has displaced the appropriate
-                                              // amount.
-constexpr float kMaxClosedPosition_deg = 88;  // Change this to a value where the servo has displaced the appropriate
-                                              // amount.
-// I : E Inspiration to Expiration Ratio
-constexpr IERatio kIERatio = {1, 2};
-constexpr bool kInvertMotion = true;  // Change this is the motor is inverted. This will reflect it 180
+    inline int32_t get_slowest_breath_time() {
+        return 1000 * 60 / min_bpm;
+    }
+
+    inline int32_t get_fastest_breath_time() {
+        return 1000 * 60 / max_bpm;
+    }
+
+} kVentRespirationConfig;
+
+extern struct __attribute__((__packed__)) VentMotionConfig {
+    float idle_pos_deg;
+    float open_pos_deg;        // Change this to a value where the servo is just barely compressing the bag
+    float min_closed_pos_deg;  // Change this to a value where the servo has displaced the appropriate amount.
+    float max_closed_pos_deg;  // Change this to a value where the servo has displaced the appropriate amount.
+    Ratio ie_ratio;          // I : E Inspiration to Expiration Ratio
+    bool invert_motion;        // Change this if the motor is inverted. This will reflect it 180
+} kVentMotionConfig;
+
+extern struct __attribute__((__packed__)) SensorConfig { LinearFit pressure_params; } kSensorConfig;
 
 class ConfigCommandRPC : public CommEndpoint {
 public:
@@ -89,12 +79,13 @@ public:
     uint8_t read(void *data, size_t size) override;
 
 private:
-    static constexpr uint32_t CONFIG_SAVE_CMD  = 0x45564153; // ASCII "SAVE"
-    static constexpr uint32_t CONFIG_ERASE_CMD = 0x53415245; // ASCII "ERAS"
-    static constexpr uint32_t CONFIG_LOAD_CMD  = 0x44414f4c; // ASCII "LOAD"
-    static constexpr uint32_t CONFIG_RESET_CMD = 0x45534553; // ASCII "RESE"
- 
+    static constexpr uint32_t CONFIG_SAVE_CMD = 0x45564153;   // ASCII "SAVE"
+    static constexpr uint32_t CONFIG_ERASE_CMD = 0x53415245;  // ASCII "ERAS"
+    static constexpr uint32_t CONFIG_LOAD_CMD = 0x44414f4c;   // ASCII "LOAD"
+    static constexpr uint32_t CONFIG_RESET_CMD = 0x45534553;  // ASCII "RESE"
+
     static constexpr uint8_t INVALID_CMD_ERR = 0x10;
+    static constexpr uint8_t CONFIG_ERR = 0x11;
 
     RecordStore *store;
 };

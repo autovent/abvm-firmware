@@ -129,7 +129,7 @@ UI_V1::Event UI_V1::update() {
     // Handle Buzzer Noises
     handle_buzzer();
 
-    if (is_silence && time_since_ms(silence_time_ms) > kSilenceTime_ms) {
+    if (is_silence && time_since_ms(silence_time_ms) > kVentAppConfig.alarm_silence_time_ms) {
         is_silence = false;
     }
 
@@ -146,10 +146,12 @@ UI_V1::Event UI_V1::update() {
             float plateau_pressure = display_values[(uint32_t)DisplayValue::PLATEAU_PRESSURE];
             controls->set_led_bar_graph(
                   ControlPanel::BAR_GRAPH_RIGHT,
-                  map<float>(peak_pressure, kPeakPressureDisplayMin, kPeakPressureDisplayMax, 1, 6));
+                  map<float>(peak_pressure, kVentRespirationConfig.peak_pressure_display_min,
+                    kVentRespirationConfig.peak_pressure_display_max, 1, 6));
             controls->set_led_bar_graph(
                   ControlPanel::BAR_GRAPH_LEFT,
-                  map<float>(plateau_pressure, kPlateauPressureDisplayMin, kPlateauPressureDisplayMax, 1, 6));
+                  map<float>(plateau_pressure, kVentRespirationConfig.plateau_pressure_display_min,
+                    kVentRespirationConfig.plateau_pressure_display_max, 1, 6));
 
             break;
         }
@@ -158,10 +160,12 @@ UI_V1::Event UI_V1::update() {
             float plateau_pressure = display_values[(uint32_t)DisplayValue::PLATEAU_PRESSURE];
             controls->set_led_bar_graph(
                   ControlPanel::BAR_GRAPH_RIGHT,
-                  map<float>(peak_pressure, kPeakPressureDisplayMin, kPeakPressureDisplayMax, 1, 6));
+                  map<float>(peak_pressure, kVentRespirationConfig.peak_pressure_display_min,
+                    kVentRespirationConfig.peak_pressure_display_max, 1, 6));
             controls->set_led_bar_graph(
                   ControlPanel::BAR_GRAPH_LEFT,
-                  map<float>(plateau_pressure, kPlateauPressureDisplayMin, kPlateauPressureDisplayMax, 1, 6));
+                  map<float>(plateau_pressure, kVentRespirationConfig.plateau_pressure_display_min,
+                    kVentRespirationConfig.plateau_pressure_display_max, 1, 6));
             break;
         }
     }

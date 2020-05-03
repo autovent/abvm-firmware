@@ -10,7 +10,7 @@ VentilatorController::VentilatorController(IMotionPlanner *motion, Servo *motor,
       next_tv_idx(0),
       tidal_volume_settings{55, 62, 69, 76, 83, 90},
       rate_settings{8, 10, 12, 14, 16, 18},
-      peak_pressure_limit_cmH2O(kDefaultPeakPressureLimit),
+      peak_pressure_limit_cmH2O(kVentRespirationConfig.default_peak_pressure_limit),
       pressure_sensor(pressure_sensor) {}
 
 void VentilatorController::start() {
@@ -18,14 +18,14 @@ void VentilatorController::start() {
     motor->set_mode(Servo::Mode::POSITION);
     state = State::GO_TO_IDLE;
 
-    motion->set_next({kIdlePositiong_deg, 0, kTimeToIdle_ms});
+    motion->set_next({kVentMotionConfig.idle_pos_deg, 0, kVentRespirationConfig.time_to_idle_ms});
     motor->set_pos_deg(motion->run(motor->position));
     is_operational = true;
 }
 
 void VentilatorController::stop() {
     state = State::GO_TO_IDLE;
-    motion->force_next({kIdlePositiong_deg, 0, kTimeToIdle_ms});
+    motion->force_next({kVentMotionConfig.idle_pos_deg, 0, kVentRespirationConfig.time_to_idle_ms});
     motor->set_pos_deg(motion->run(motion->get_pos()));
     current_peak_pressure_cmH2O = 0;
     last_peak_pressure_cmH2O = 0;
@@ -46,14 +46,14 @@ float VentilatorController::update() {
 
     if (pressure_cmH2O >= peak_pressure_limit_cmH2O && state != State::INSPIRATION) {
         state = State::EXPIRATION;
-        motion->force_next({kOpenPosition_deg, 0, kFastOpenTime_ms});
+        motion->force_next({kVentMotionConfig.open_pos_deg, 0, kVentRespirationConfig.fast_open_time_ms});
         motor->set_pos_deg(motion->run(motion->get_pos()));
         is_fast_open = true;
     }
 
     if (motor->i_measured > 4.5 && state != State::INSPIRATION) {
         state = State::EXPIRATION;
-        motion->force_next({kOpenPosition_deg, 0, kFastOpenTime_ms});
+        motion->force_next({kVentMotionConfig.open_pos_deg, 0, kVentRespirationConfig.fast_open_time_ms});
         motor->set_pos_deg(motion->run(motion->get_pos()));
         is_fast_open = true;
     }
@@ -67,12 +67,12 @@ float VentilatorController::update() {
             case State::IDLE:
                 if (is_operational) {
                     state = State::GO_TO_START;
-                    motion->set_next({kOpenPosition_deg, 0, kTimeToIdle_ms});
+                    motion->set_next({kVentMotionConfig.open_pos_deg, 0, kVentRespirationConfig.time_to_idle_ms});
                 }
                 break;
             case State::GO_TO_START:
                 state = State::INSPIRATION;
-                motion->set_next({kOpenPosition_deg, 0, kTimeToIdle_ms});
+                motion->set_next({kVentMotionConfig.open_pos_deg, 0, kVentRespirationConfig.time_to_idle_ms});
                 break;
             case State::INSPIRATION:
                 last_plateau_pressure = current_plateau_pressure;
@@ -89,28 +89,25 @@ float VentilatorController::update() {
                     state = State::EXPIRATION;
                 }
 
-                motion->set_next({tidal_volume_settings[current_tv_idx], 0,
-                                  kIERatio.inspiration_percent() * bpm_to_time_ms(rate_settings[current_rate_idx])});
+                motion->set_next({tidal_volume_settings[current_tv_idx], 0, inspiration_time()});
                 break;
             case State::INSPIRATORY_HOLD:
                 state = State::EXPIRATION;
-                motion->set_next({tidal_volume_settings[current_tv_idx], 0, kPlateauTime_ms});
+                motion->set_next({tidal_volume_settings[current_tv_idx], 0, kVentRespirationConfig.plateau_time_ms});
                 break;
             case State::EXPIRATION: {
                 state = State::INSPIRATION;
-                uint32_t plateau_time = is_measure_plateau_cycle ? kPlateauTime_ms : 0;
+                plateau_time = is_measure_plateau_cycle ? kVentRespirationConfig.plateau_time_ms : 0;
                 if (is_fast_open) {
-                    plateau_time = kFastOpenTime_ms;
+                    plateau_time = kVentRespirationConfig.fast_open_time_ms;
                     is_fast_open = false;
                 }
-                motion->set_next({kOpenPosition_deg, 0,
-                                  (kIERatio.expiration_percent() * bpm_to_time_ms(rate_settings[current_rate_idx])) -
-                                        plateau_time});
+                motion->set_next({kVentMotionConfig.open_pos_deg, 0, expiration_time()});
                 break;
             }
             case State::GO_TO_IDLE:
                 state = State::IDLE;
-                motion->set_next({kIdlePositiong_deg, 0, kTimeToIdle_ms});
+                motion->set_next({kVentMotionConfig.idle_pos_deg, 0, kVentRespirationConfig.time_to_idle_ms});
                 break;
             default:
                 break;
@@ -132,11 +129,20 @@ float VentilatorController::get_peak_pressure_cmH2O() {
 }
 
 float VentilatorController::get_plateau_pressure_cmH2O() {
-    // If the last plateau pressur is infinity then return 0, this just  means  there is no valid imeasurement of the
-    // plateau pressure yet.
+    // If the last plateau pressur is infinity then return 0, this just  means  there is no valid imeasurement of
+    // the plateau pressure yet.
     if (last_plateau_pressure == INFINITY) {
         return 0;
     } else {
         return last_plateau_pressure;
     }
+}
+
+float VentilatorController::inspiration_time() const {
+    return kVentMotionConfig.ie_ratio.to_percent(INSPIRATION_RATIO) * bpm_to_time_ms(rate_settings[current_rate_idx]);
+}
+
+float VentilatorController::expiration_time() const {
+    return (kVentMotionConfig.ie_ratio.to_percent(EXPIRATION_RATIO) * bpm_to_time_ms(rate_settings[current_rate_idx])) -
+           plateau_time;
 }

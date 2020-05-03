@@ -1,15 +1,14 @@
 #ifndef ADS1231_H
 #define ADS1231_H
 
-#include "platform.h"
 #include "drivers/sensor.h"
+#include "math/linear_fit.h"
+#include "platform.h"
 
 class ADS1231 : public ISensor {
 public:
-    ADS1231();
-
     ADS1231(GPIO_TypeDef *powerdown_port, uint32_t powerdown_pin, SPI_HandleTypeDef *hspi, GPIO_TypeDef *miso_port,
-            uint32_t miso_pin, GPIO_TypeDef *sclk_port, uint32_t sclk_pin, float m = 1, float b = 0);
+            uint32_t miso_pin, GPIO_TypeDef *sclk_port, uint32_t sclk_pin, LinearFit const *linear_fit);
 
     void init();
 
@@ -36,14 +35,14 @@ private:
     GPIO_TypeDef *powerdown_port;
     uint32_t powerdown_pin;
 
+    LinearFit const *linear_fit;
+
     bool is_measuring;
 
     float volts;
     float vref;
     int32_t value;
     bool is_first = true;
-    float m;
-    float b;
 
     uint32_t rejects = 0;
     bool is_ready();

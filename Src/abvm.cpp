@@ -27,11 +27,11 @@
 #include "ventilator_controller.h"
 #include "sys/alarms.h"
 
-uint8_t HW_REVISION = 1;
+constexpr uint32_t kIdleLoggingInterval = 1000;  // 1Hz
+constexpr uint32_t kRunningLoggingInterval = 50; // 20Hz
 
 ADS1231 pressure_sensor(ADC1_PWRDN_GPIO_Port, ADC1_PWRDN_Pin, &hspi1, ADC_SPI_MISO_GPIO_Port, ADC_SPI_MISO_Pin,
-                        ADC_SPI_SCK_GPIO_Port, ADC_SPI_SCK_Pin, 1.0f / (6.8948 * .00054),
-                        .045 + (1 / (6.8948 /*kPA/psi*/ * .00054)) * -0.00325f);
+                        ADC_SPI_SCK_GPIO_Port, ADC_SPI_SCK_Pin, &kSensorConfig.pressure_params);
 
 DRV8873 motor_driver(MC_SLEEP_GPIO_Port, MC_SLEEP_Pin, MC_DISABLE_GPIO_Port, MC_DISABLE_Pin, MC_FAULT_GPIO_Port,
                      MC_FAULT_Pin, &htim2, TIM_CHANNEL_1, TIM_CHANNEL_3, &hspi2, MC_SPI_CS_GPIO_Port, MC_SPI_CS_Pin,
@@ -43,8 +43,8 @@ USBComm usb_comm;
 
 TrapezoidalPlanner motion({.4, .4}, 10);
 
-Servo motor(1, &motor_driver, &encoder, kMotorParams, kMotorVelPidParams, kMotorVelLimits, kMotorPosPidParams,
-            kMotorPosLimits);
+Servo motor(1, &motor_driver, &encoder, kMotorConfig.motor_params, kMotorConfig.motor_vel_pid_params,
+            kMotorConfig.motor_vel_limits, kMotorConfig.motor_pos_pid_params, kMotorConfig.motor_pos_limits);
 
 Pin sw_start_pin{SW_START_GPIO_Port, SW_START_Pin};
 Pin sw_stop_pin{SW_STOP_GPIO_Port, SW_STOP_Pin};
@@ -76,15 +76,28 @@ HomingController home(&motor, &homing_switch);
 LC064 eeprom(&hi2c1, 0);
 RecordStore record_store(&eeprom);
 
-CommEndpoint hw_revision_endpoint(0, &HW_REVISION, sizeof(HW_REVISION), true);
+CommEndpoint hw_revision_ep(0, &kHardwareRev, sizeof(kHardwareRev), true);
 
-DataLogger logger(10, &pressure_sensor, &motor, &motor_driver, &vent);
-ConfigCommandRPC config_cmd(100, &record_store);
+DataLogger logger_ep(0x0A, &pressure_sensor, &motor, &motor_driver, &vent);
+
+ConfigCommandRPC config_cmd_ep(0x64, &record_store);
+
+// config endpoints
+CommEndpoint motor_config_ep(0x65, &kMotorConfig, sizeof(kMotorConfig));
+CommEndpoint vent_app_config_ep(0x66, &kVentAppConfig, sizeof(kVentAppConfig));
+CommEndpoint vent_resp_config_ep(0x67, &kVentRespirationConfig, sizeof(kVentRespirationConfig));
+CommEndpoint vent_motion_config_ep(0x68, &kVentMotionConfig, sizeof(kVentMotionConfig));
+CommEndpoint sensor_config_ep(0x69, &kSensorConfig, sizeof(kSensorConfig));
 
 CommEndpoint *comm_endpoints[] = {
-    &hw_revision_endpoint,
-    &logger,
-    &config_cmd,
+    &hw_revision_ep,
+    &logger_ep,
+    &config_cmd_ep,
+    &motor_config_ep,
+    &vent_app_config_ep,
+    &vent_resp_config_ep,
+    &vent_motion_config_ep,
+    &sensor_config_ep,
 };
 
 SerialComm ser_comm(comm_endpoints, sizeof(comm_endpoints)/sizeof(comm_endpoints[0]), &usb_comm);
@@ -107,7 +120,7 @@ extern "C" void abvm_init() {
     pressure_sensor.init();
     pressure_sensor.set_powerdown(false);
 
-    if (mode == Modes::FACTORY_TEST) {
+    if (kVentAppConfig.mode == Modes::FACTORY_TEST) {
         control_panel_self_test(controls);
     }
 
@@ -129,13 +142,25 @@ extern "C" void abvm_init() {
     controls.set_led_bar_graph(ControlPanel::BAR_GRAPH_RIGHT, 1);
     home.start();
 
-    logger.set_streaming(20);
+    logger_ep.set_streaming(kIdleLoggingInterval);
+
     ui.init();
 
+    eeprom.init();
+    record_store.init();
+    record_store.add_entry("MotorConfig", &kMotorConfig, sizeof(kMotorConfig), sizeof(kMotorConfig));
+    record_store.add_entry("VentAppConfig", &kVentAppConfig, sizeof(kVentAppConfig), sizeof(kVentAppConfig));
+    record_store.add_entry("VentRespConfig", &kVentRespirationConfig, sizeof(kVentRespirationConfig),
+                           sizeof(kVentRespirationConfig));
+    record_store.add_entry("VentMotionConfig", &kVentMotionConfig, sizeof(kVentMotionConfig),
+                           sizeof(kVentMotionConfig));
+    record_store.add_entry("SensorConfig", &kSensorConfig, sizeof(kSensorConfig), sizeof(kSensorConfig));
+    if (!record_store.first_load()) {
+        // TODO: handle load failure
+    }
     // Power on self test here
 }
 
-uint32_t last = 0;
 uint32_t last_motor = 0;
 uint32_t last_motion = 0;
 uint32_t interval = 1000;
@@ -188,11 +213,13 @@ extern "C" void abvm_update() {
             } else if (home.is_done() && !vent.is_running()) {
                 ui.set_audio_alert(UI_V1::AudioAlert::STARTING);
                 vent.start();
+                logger_ep.set_streaming(kRunningLoggingInterval);
                 controls.set_status_led(ControlPanel::STATUS_LED_2, true);
             }
             break;
         case IUI::Event::STOP:
             vent.stop();
+            logger_ep.set_streaming(kIdleLoggingInterval);
             ui.set_audio_alert(UI_V1::AudioAlert::STOPPING);
             controls.set_status_led(ControlPanel::STATUS_LED_2, false);
             break;
@@ -209,11 +236,11 @@ extern "C" void abvm_update() {
             vent.bump_rate(-1);
             break;
         case IUI::Event::PRESSURE_LIMIT_UP:
-            vent.increment_peak_pressure_limit_cmH2O(kPeakPressureLimitIncrement);
+            vent.increment_peak_pressure_limit_cmH2O(kVentRespirationConfig.peak_pressure_limit_increment);
             break;
 
         case IUI::Event::PRESSURE_LIMIT_DOWN:
-            vent.increment_peak_pressure_limit_cmH2O(-kPeakPressureLimitIncrement);
+            vent.increment_peak_pressure_limit_cmH2O(-kVentRespirationConfig.peak_pressure_limit_increment);
             break;
 
         case IUI::Event::SILENCE_ALARM:

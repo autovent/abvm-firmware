@@ -2,10 +2,10 @@
 
 #include "config.h"
 #include "controls/motion_planner.h"
+#include "drivers/sensor.h"
 #include "math/conversions.h"
 #include "math/dsp.h"
 #include "servo.h"
-#include "drivers/sensor.h"
 
 class VentilatorController {
 public:
@@ -46,7 +46,7 @@ public:
     }
 
     inline float get_open_pos() {
-        return kOpenPosition_deg;
+        return kVentMotionConfig.open_pos_deg;
     }
 
     inline uint8_t get_rate_idx() {
@@ -57,20 +57,26 @@ public:
         return rate_settings[get_rate_idx()];
     }
 
-
     float get_peak_pressure_cmH2O();
     float get_plateau_pressure_cmH2O();
     inline float get_peak_pressure_limit_cmH2O() const {
         return peak_pressure_limit_cmH2O;
     }
 
-    float get_pressure_cmH2O() { return pressure_cmH2O; }
+    float get_pressure_cmH2O() {
+        return pressure_cmH2O;
+    }
 
     void increment_peak_pressure_limit_cmH2O(float x) {
-      peak_pressure_limit_cmH2O = saturate(peak_pressure_limit_cmH2O + x, kPeakPressureDisplayMin, kPeakPressureDisplayMax);
+        peak_pressure_limit_cmH2O =
+              saturate(peak_pressure_limit_cmH2O + x, kVentRespirationConfig.peak_pressure_display_min,
+                       kVentRespirationConfig.peak_pressure_display_max);
     }
 
 private:
+    static constexpr bool INSPIRATION_RATIO = false;
+    static constexpr bool EXPIRATION_RATIO = true;
+
     IMotionPlanner *motion;
     Servo *motor;
     ISensor *pressure_sensor;
@@ -101,6 +107,13 @@ private:
     float last_plateau_pressure;
     float current_plateau_pressure;
 
-    float pressure_cmH2O = 0 ;
+    float pressure_cmH2O = 0;
     float peak_pressure_limit_cmH2O;
+
+    uint32_t plateau_time;
+
+    float inspiration_time() const;
+
+    float expiration_time() const;
+
 };
