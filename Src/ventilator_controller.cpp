@@ -89,9 +89,7 @@ float VentilatorController::update() {
                     state = State::EXPIRATION;
                 }
 
-                motion->set_next({tidal_volume_settings[current_tv_idx], 0,
-                                  kVentMotionConfig.ie_ratio.inspiration_percent() *
-                                  bpm_to_time_ms(rate_settings[current_rate_idx])});
+                motion->set_next({tidal_volume_settings[current_tv_idx], 0, inspiration_time()});
                 break;
             case State::INSPIRATORY_HOLD:
                 state = State::EXPIRATION;
@@ -99,14 +97,12 @@ float VentilatorController::update() {
                 break;
             case State::EXPIRATION: {
                 state = State::INSPIRATION;
-                uint32_t plateau_time = is_measure_plateau_cycle ? kVentRespirationConfig.plateau_time_ms : 0;
+                plateau_time = is_measure_plateau_cycle ? kVentRespirationConfig.plateau_time_ms : 0;
                 if (is_fast_open) {
                     plateau_time = kVentRespirationConfig.fast_open_time_ms;
                     is_fast_open = false;
                 }
-                motion->set_next({kVentMotionConfig.open_pos_deg, 0,
-                                  (kVentMotionConfig.ie_ratio.expiration_percent() *
-                                  bpm_to_time_ms(rate_settings[current_rate_idx])) - plateau_time});
+                motion->set_next({kVentMotionConfig.open_pos_deg, 0, expiration_time()});
                 break;
             }
             case State::GO_TO_IDLE:
@@ -133,11 +129,20 @@ float VentilatorController::get_peak_pressure_cmH2O() {
 }
 
 float VentilatorController::get_plateau_pressure_cmH2O() {
-    // If the last plateau pressur is infinity then return 0, this just  means  there is no valid imeasurement of the
-    // plateau pressure yet.
+    // If the last plateau pressur is infinity then return 0, this just  means  there is no valid imeasurement of
+    // the plateau pressure yet.
     if (last_plateau_pressure == INFINITY) {
         return 0;
     } else {
         return last_plateau_pressure;
     }
+}
+
+float VentilatorController::inspiration_time() const {
+    return kVentMotionConfig.ie_ratio.to_percent(INSPIRATION_RATIO) * bpm_to_time_ms(rate_settings[current_rate_idx]);
+}
+
+float VentilatorController::expiration_time() const {
+    return (kVentMotionConfig.ie_ratio.to_percent(EXPIRATION_RATIO) * bpm_to_time_ms(rate_settings[current_rate_idx])) -
+           plateau_time;
 }

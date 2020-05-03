@@ -2,6 +2,7 @@
 #define CONFIG_H_
 #include "controls/pid.h"
 #include "math/conversions.h"
+#include "math/ratio.h"
 #include "math/linear_fit.h"
 #include "record_store.h"
 #include "serial_comm.h"
@@ -17,18 +18,6 @@ enum class Modes : uint8_t {
 };
 
 extern uint8_t kHardwareRev;
-
-struct IERatio {
-    float inspiration;
-    float expiration;
-
-    inline float inspiration_percent() {
-        return inspiration / (inspiration + expiration);
-    }
-    inline float expiration_percent() {
-        return expiration / (inspiration + expiration);
-    }
-};
 
 extern struct __attribute__((__packed__)) MotorConfig {
     Servo::Config motor_params;
@@ -76,7 +65,7 @@ extern struct __attribute__((__packed__)) VentMotionConfig {
     float open_pos_deg;        // Change this to a value where the servo is just barely compressing the bag
     float min_closed_pos_deg;  // Change this to a value where the servo has displaced the appropriate amount.
     float max_closed_pos_deg;  // Change this to a value where the servo has displaced the appropriate amount.
-    IERatio ie_ratio;          // I : E Inspiration to Expiration Ratio
+    Ratio ie_ratio;          // I : E Inspiration to Expiration Ratio
     bool invert_motion;        // Change this if the motor is inverted. This will reflect it 180
 } kVentMotionConfig;
 
