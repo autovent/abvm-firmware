@@ -22,5 +22,5 @@ uint8_t DataLogger::read(void *data, size_t size) {
     log.vent_closed_pos = vent->get_closed_pos();
     log.vent_open_pos = vent->get_open_pos();
 
-    CommEndpoint::read(data, size);
+    return CommEndpoint::read(data, size);
 }
