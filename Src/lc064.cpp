@@ -22,25 +22,23 @@ bool LC064::write(uint16_t addr, uint8_t *data, uint16_t len) {
     assert(addr <= TOTAL_SIZE);
     assert(len <= TOTAL_SIZE);
 
-    if (!ready()) return false;
-
-    uint16_t last_addr = addr + len;
-
+    uint32_t bytes_written = 0;
     do {
-        uint16_t next_page_boundary = (addr - (addr % PAGE_SIZE)) + PAGE_SIZE;
-        uint16_t bytes_to_write = next_page_boundary - addr;
+        uint32_t max_bytes = PAGE_SIZE - ((addr + bytes_written) % PAGE_SIZE);
+        uint32_t bytes_to_write = len - bytes_written;
+        if (bytes_to_write > max_bytes) bytes_to_write = max_bytes;
 
-        if (bytes_to_write > last_addr - addr) bytes_to_write = last_addr - addr;
+        if (!ready()) return false;
 
-        HAL_StatusTypeDef status =
-              HAL_I2C_Mem_Write(hi2c, dev_addr, addr, I2C_MEMADD_SIZE_16BIT, data, bytes_to_write, I2C_TIMEOUT);
+        HAL_StatusTypeDef status = HAL_I2C_Mem_Write(hi2c, dev_addr, addr + bytes_written, I2C_MEMADD_SIZE_16BIT,
+                                                     &data[bytes_written], bytes_to_write, I2C_TIMEOUT);
 
         if (status != HAL_OK) {
             return false;
         }
 
-        addr += bytes_to_write;
-    } while (addr < last_addr);
+        bytes_written += bytes_to_write;
+    } while (bytes_written < len);
 
     return true;
 }
