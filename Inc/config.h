@@ -1,8 +1,8 @@
 #ifndef CONFIG_H_
 #define CONFIG_H_
 #include "controls/pid.h"
-#include "drivers/sensor.h"
 #include "math/conversions.h"
+#include "math/linear_fit.h"
 #include "record_store.h"
 #include "serial_comm.h"
 #include "servo.h"
@@ -73,16 +73,14 @@ extern struct __attribute__((__packed__)) VentResiprationConfig {
 
 extern struct __attribute__((__packed__)) VentMotionConfig {
     float idle_pos_deg;
-    float open_pos_deg;         // Change this to a value where the servo is just barely compressing the bag
-    float min_closed_pos_deg;   // Change this to a value where the servo has displaced the appropriate amount.
-    float max_closed_pos_deg;   // Change this to a value where the servo has displaced the appropriate amount.
-    IERatio ie_ratio;           // I : E Inspiration to Expiration Ratio
-    bool invert_motion;         // Change this if the motor is inverted. This will reflect it 180
+    float open_pos_deg;        // Change this to a value where the servo is just barely compressing the bag
+    float min_closed_pos_deg;  // Change this to a value where the servo has displaced the appropriate amount.
+    float max_closed_pos_deg;  // Change this to a value where the servo has displaced the appropriate amount.
+    IERatio ie_ratio;          // I : E Inspiration to Expiration Ratio
+    bool invert_motion;        // Change this if the motor is inverted. This will reflect it 180
 } kVentMotionConfig;
 
-extern struct __attribute__((__packed__)) SensorConfig {
-    ISensor::LinearParams pressure_params;
-} kSensorConfig;
+extern struct __attribute__((__packed__)) SensorConfig { LinearFit pressure_params; } kSensorConfig;
 
 class ConfigCommandRPC : public CommEndpoint {
 public:
@@ -92,10 +90,10 @@ public:
     uint8_t read(void *data, size_t size) override;
 
 private:
-    static constexpr uint32_t CONFIG_SAVE_CMD  = 0x45564153; // ASCII "SAVE"
-    static constexpr uint32_t CONFIG_ERASE_CMD = 0x53415245; // ASCII "ERAS"
-    static constexpr uint32_t CONFIG_LOAD_CMD  = 0x44414f4c; // ASCII "LOAD"
-    static constexpr uint32_t CONFIG_RESET_CMD = 0x45534553; // ASCII "RESE"
+    static constexpr uint32_t CONFIG_SAVE_CMD = 0x45564153;   // ASCII "SAVE"
+    static constexpr uint32_t CONFIG_ERASE_CMD = 0x53415245;  // ASCII "ERAS"
+    static constexpr uint32_t CONFIG_LOAD_CMD = 0x44414f4c;   // ASCII "LOAD"
+    static constexpr uint32_t CONFIG_RESET_CMD = 0x45534553;  // ASCII "RESE"
 
     static constexpr uint8_t INVALID_CMD_ERR = 0x10;
     static constexpr uint8_t CONFIG_ERR = 0x11;

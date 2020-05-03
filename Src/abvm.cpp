@@ -31,8 +31,7 @@ constexpr uint32_t kIdleLoggingInterval = 1000;  // 1Hz
 constexpr uint32_t kRunningLoggingInterval = 50; // 20Hz
 
 ADS1231 pressure_sensor(ADC1_PWRDN_GPIO_Port, ADC1_PWRDN_Pin, &hspi1, ADC_SPI_MISO_GPIO_Port, ADC_SPI_MISO_Pin,
-                        ADC_SPI_SCK_GPIO_Port, ADC_SPI_SCK_Pin, kSensorConfig.pressure_params.m,
-                        kSensorConfig.pressure_params.b);
+                        ADC_SPI_SCK_GPIO_Port, ADC_SPI_SCK_Pin, &kSensorConfig.pressure_params);
 
 DRV8873 motor_driver(MC_SLEEP_GPIO_Port, MC_SLEEP_Pin, MC_DISABLE_GPIO_Port, MC_DISABLE_Pin, MC_FAULT_GPIO_Port,
                      MC_FAULT_Pin, &htim2, TIM_CHANNEL_1, TIM_CHANNEL_3, &hspi2, MC_SPI_CS_GPIO_Port, MC_SPI_CS_Pin,
