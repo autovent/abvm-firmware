@@ -1,6 +1,6 @@
 #include "ventilator_controller.h"
 
-VentilatorController::VentilatorController(IMotionPlanner *motion, Servo *motor, ISensor *pressure_sensor)
+VentilatorController::VentilatorController(IMotionPlanner *motion, Servo *motor, ISensor *pressure_sensor, float tv_settings[], uint32_t num_tv_settings, float bpm_settings[], uint32_t num_bpm_settings)
     : motion(motion),
       motor(motor),
       state(State::GO_TO_IDLE),
@@ -8,8 +8,10 @@ VentilatorController::VentilatorController(IMotionPlanner *motion, Servo *motor,
       is_operational(false),
       next_rate_idx(0),
       next_tv_idx(0),
-      tidal_volume_settings{55, 62, 69, 76, 83, 90},
-      rate_settings{8, 10, 12, 14, 16, 18},
+      tidal_volume_settings(tv_settings),
+      num_tv_settings(num_tv_settings),
+      rate_settings(bpm_settings),
+      num_rate_settings(num_bpm_settings),
       peak_pressure_limit_cmH2O(kVentRespirationConfig.default_peak_pressure_limit),
       pressure_sensor(pressure_sensor) {}
 
@@ -34,7 +36,7 @@ void VentilatorController::stop() {
 
 float VentilatorController::update() {
     // Filter the pressure sensor data
-    pressure_cmH2O = .5 * pressure_cmH2O + .5 * psi_to_cmH2O(pressure_sensor->read());
+    pressure_cmH2O = .5 * pressure_cmH2O + .5 * pressure_sensor->read();
 
     if (pressure_cmH2O > current_peak_pressure_cmH2O) {
         current_peak_pressure_cmH2O = pressure_cmH2O;
@@ -140,10 +142,11 @@ float VentilatorController::get_plateau_pressure_cmH2O() {
 }
 
 float VentilatorController::inspiration_time() const {
-    return kVentMotionConfig.ie_ratio.to_percent(INSPIRATION_RATIO) * bpm_to_time_ms(rate_settings[current_rate_idx]);
+    return (1 / (kVentMotionConfig.expiration_part + 1)) * bpm_to_time_ms(rate_settings[current_rate_idx]);
 }
 
 float VentilatorController::expiration_time() const {
-    return (kVentMotionConfig.ie_ratio.to_percent(EXPIRATION_RATIO) * bpm_to_time_ms(rate_settings[current_rate_idx])) -
+    return ((kVentMotionConfig.expiration_part / (kVentMotionConfig.expiration_part + 1)) *
+            bpm_to_time_ms(rate_settings[current_rate_idx])) -
            plateau_time;
 }

@@ -13,12 +13,12 @@ DataLogger::DataLogger(uint8_t id, ADS1231 *pressure_sensor, Servo *motor, DRV88
 
 uint8_t DataLogger::read(void *data, size_t size) {
     log.time = msec_to_sec(millis());
-    log.pressure = psi_to_cmH2O(pressure_sensor->read());
-    log.motor_velocity = motor->velocity;
-    log.motor_target_vel = motor->target_velocity;
+    log.pressure = pressure_sensor->read();
+    log.motor_velocity = rad_per_sec_to_rpm(motor->velocity);
+    log.motor_target_vel = rad_per_sec_to_rpm(motor->target_velocity);
     log.motor_pos = motor->position;
     log.motor_target_pos = motor->target_pos;
-    log.motor_current = motor_driver->get_current();
+    log.motor_current = motor->i_measured;
     log.vent_rate = vent->get_rate();
     log.vent_closed_pos = vent->get_closed_pos();
     log.vent_open_pos = vent->get_open_pos();

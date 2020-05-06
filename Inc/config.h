@@ -2,14 +2,10 @@
 #define CONFIG_H_
 #include "controls/pid.h"
 #include "math/conversions.h"
-#include "math/ratio.h"
 #include "math/linear_fit.h"
 #include "record_store.h"
 #include "serial_comm.h"
 #include "servo.h"
-
-#define MOTOR_GOBILDA_30RPM
-#define CONFIG_LONG_SPIRIT_FINGERS
 
 enum class Modes : uint8_t {
     FACTORY_TEST,
@@ -49,27 +45,19 @@ extern struct VentResiprationConfig {
     float plateau_pressure_display_min;
     float plateau_pressure_display_max;
     float peak_pressure_limit_increment;
-
-    inline int32_t get_slowest_breath_time() {
-        return 1000 * 60 / min_bpm;
-    }
-
-    inline int32_t get_fastest_breath_time() {
-        return 1000 * 60 / max_bpm;
-    }
-
 } kVentRespirationConfig;
 
 extern struct VentMotionConfig {
     float idle_pos_deg;
-    float open_pos_deg;        // Change this to a value where the servo is just barely compressing the bag
-    float min_closed_pos_deg;  // Change this to a value where the servo has displaced the appropriate amount.
-    float max_closed_pos_deg;  // Change this to a value where the servo has displaced the appropriate amount.
-    Ratio ie_ratio;          // I : E Inspiration to Expiration Ratio
-    bool invert_motion;        // Change this if the motor is inverted. This will reflect it 180
+    float open_pos_deg;      // Change this to a value where the servo is just barely compressing the bag
+    float expiration_part;   // I : E with 1 fixed to 1.
+    uint32_t invert_motion;  // Change this if the motor is inverted. This will reflect it 180
 } kVentMotionConfig;
 
 extern struct SensorConfig { LinearFit pressure_params; } kSensorConfig;
+
+extern float kVentTVSettings[6];
+extern float kVentRateSettings[6];
 
 class ConfigCommandRPC : public CommEndpoint {
 public:

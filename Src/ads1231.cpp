@@ -8,7 +8,7 @@
 #define SPI_TIMEOUT 10
 
 ADS1231::ADS1231(GPIO_TypeDef *powerdown_port, uint32_t powerdown_pin, SPI_HandleTypeDef *hspi, GPIO_TypeDef *miso_port,
-                 uint32_t miso_pin, GPIO_TypeDef *sclk_port, uint32_t sclk_pin, LinearFit const *linear_fit)
+                 uint32_t miso_pin, GPIO_TypeDef *sclk_port, uint32_t sclk_pin, LinearFit const *linear_fit_mv)
     : powerdown_port(powerdown_port),
       powerdown_pin(powerdown_pin),
       miso_port(miso_port),
@@ -17,7 +17,7 @@ ADS1231::ADS1231(GPIO_TypeDef *powerdown_port, uint32_t powerdown_pin, SPI_Handl
       sclk_pin(sclk_pin),
       hspi(hspi),
       vref(3.06),
-      linear_fit(linear_fit) {}
+      linear_fit_mv(linear_fit_mv) {}
 
 void ADS1231::init() {
     enable_spi(false);
@@ -28,7 +28,7 @@ float ADS1231::read_volts() {
 }
 
 float ADS1231::read() {
-    return linear_fit->calculate(volts);
+    return linear_fit_mv->calculate(volts * 1e3); // Convert to mV first
 }
 
 /**

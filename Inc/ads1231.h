@@ -8,7 +8,7 @@
 class ADS1231 : public ISensor {
 public:
     ADS1231(GPIO_TypeDef *powerdown_port, uint32_t powerdown_pin, SPI_HandleTypeDef *hspi, GPIO_TypeDef *miso_port,
-            uint32_t miso_pin, GPIO_TypeDef *sclk_port, uint32_t sclk_pin, LinearFit const *linear_fit);
+            uint32_t miso_pin, GPIO_TypeDef *sclk_port, uint32_t sclk_pin, LinearFit const *linear_fit_mV);
 
     void init();
 
@@ -35,7 +35,7 @@ private:
     GPIO_TypeDef *powerdown_port;
     uint32_t powerdown_pin;
 
-    LinearFit const *linear_fit;
+    LinearFit const *linear_fit_mv;
 
     bool is_measuring;
 
