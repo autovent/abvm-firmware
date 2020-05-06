@@ -19,7 +19,7 @@ enum class Modes : uint8_t {
 
 extern uint8_t kHardwareRev;
 
-extern struct __attribute__((__packed__)) MotorConfig {
+extern struct MotorConfig {
     Servo::Config motor_params;
     PID::Params motor_vel_pid_params;
     PID::Params motor_pos_pid_params;
@@ -27,7 +27,7 @@ extern struct __attribute__((__packed__)) MotorConfig {
     Range<float> motor_pos_limits;  // rads
 } kMotorConfig;
 
-extern struct __attribute__((__packed__)) VentAppConfig {
+extern struct VentAppConfig {
     Modes mode;
     uint32_t current_update_period_ms;
     uint32_t position_update_period_ms;
@@ -37,7 +37,7 @@ extern struct __attribute__((__packed__)) VentAppConfig {
 
 // Configuration parameters
 // ! EDIT theses as needed
-extern struct __attribute__((__packed__)) VentResiprationConfig {
+extern struct VentResiprationConfig {
     uint32_t time_to_idle_ms;
     int32_t min_bpm;
     int32_t max_bpm;
@@ -60,7 +60,7 @@ extern struct __attribute__((__packed__)) VentResiprationConfig {
 
 } kVentRespirationConfig;
 
-extern struct __attribute__((__packed__)) VentMotionConfig {
+extern struct VentMotionConfig {
     float idle_pos_deg;
     float open_pos_deg;        // Change this to a value where the servo is just barely compressing the bag
     float min_closed_pos_deg;  // Change this to a value where the servo has displaced the appropriate amount.
@@ -69,7 +69,7 @@ extern struct __attribute__((__packed__)) VentMotionConfig {
     bool invert_motion;        // Change this if the motor is inverted. This will reflect it 180
 } kVentMotionConfig;
 
-extern struct __attribute__((__packed__)) SensorConfig { LinearFit pressure_params; } kSensorConfig;
+extern struct SensorConfig { LinearFit pressure_params; } kSensorConfig;
 
 class ConfigCommandRPC : public CommEndpoint {
 public:
