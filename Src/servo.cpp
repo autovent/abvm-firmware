@@ -104,7 +104,7 @@ void Servo::update() {
     // TODO: replace with a tested filter library
     position = .9* position + .1 * to_rad_at_output(next_pos);
     velocity = .98 * velocity + .02 * to_rad_at_output(counts) / (period_ms / 1000.0f);  // rad / s <--- Filter this
-    i_measured = .98 * i_measured + .02 * driver->get_current();
+    i_measured = .99 * i_measured + .01 * driver->get_current();
 
     test_no_encoder_fault(counts);
     test_wrong_direction();
@@ -124,14 +124,14 @@ void Servo::update() {
         driver->set_pwm(0);
     } else {
         if (mode == Mode::POSITION) {
-            commanded_pos = commanded_pos*.2 + target_pos *.8;
-            commanded_pos = pos_limits.saturate(target_pos);
+            commanded_pos = commanded_pos*.1 + target_pos *.9;
+            commanded_pos = pos_limits.saturate(commanded_pos);
 
             set_velocity(pos_pid.update(commanded_pos, position));
         }
 
         if (mode == Mode::VELOCITY || mode == Mode::POSITION) {
-            commanded_velocity = commanded_velocity*.2 + target_velocity *.8;
+            commanded_velocity = commanded_velocity*.1 + target_velocity *.9;
             commanded_velocity = vel_limits.saturate(commanded_velocity);
             command = vel_pid.update(commanded_velocity, velocity);
 
