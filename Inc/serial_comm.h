@@ -23,6 +23,8 @@ class CommEndpoint {
 public:
     explicit CommEndpoint(uint8_t id, void *const data_ptr, size_t size, bool read_only=false);
 
+    explicit CommEndpoint(uint8_t id, void const *const data_ptr, size_t size);
+
     virtual uint8_t write(void *data, size_t size);
     virtual uint8_t read(void *data, size_t size);
 

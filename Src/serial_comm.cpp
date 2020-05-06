@@ -8,6 +8,9 @@
 CommEndpoint::CommEndpoint(uint8_t id, void *const data_ptr, size_t size, bool read_only)
     : id(id), size(size), data(data_ptr), read_only(read_only) {}
 
+CommEndpoint::CommEndpoint(uint8_t id, void const *const data_ptr, size_t size)
+    : id(id), size(size), data(const_cast<void * const>(data_ptr)), read_only(true) {}
+
 uint8_t CommEndpoint::write(void *data, size_t size) {
     if (size != this->size) {
         return (uint8_t)CommError::ERROR_SIZE;

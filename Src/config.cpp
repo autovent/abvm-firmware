@@ -55,7 +55,7 @@ SensorConfig kSensorConfig = {
 };
 
 ConfigCommandRPC::ConfigCommandRPC(uint8_t id, RecordStore *store) :
-    CommEndpoint(id, NULL, sizeof(uint32_t)), store(store) {}
+    CommEndpoint(id, (void *const)NULL, sizeof(uint32_t), false), store(store) {}
 
 uint8_t ConfigCommandRPC::write(void *data, size_t size) {
     uint32_t *cmd_in = (uint32_t*)data;

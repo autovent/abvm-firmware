@@ -27,6 +27,7 @@
 #include "ui/ui_v1.h"
 #include "usb_comm.h"
 #include "ventilator_controller.h"
+#include "version.h"
 
 constexpr uint32_t kIdleLoggingInterval = 1000;   // 1Hz
 constexpr uint32_t kRunningLoggingInterval = 50;  // 20Hz
@@ -78,6 +79,7 @@ LC064 eeprom(&hi2c1, 0);
 RecordStore record_store(&eeprom);
 
 CommEndpoint hw_revision_ep(0, &kHardwareRev, sizeof(kHardwareRev), true);
+CommEndpoint version_ep(0x1, &APP_VERSION, sizeof(APP_VERSION));
 
 DataLogger logger_ep(0x0A, &pressure_sensor, &motor, &motor_driver, &vent);
 
@@ -91,8 +93,9 @@ CommEndpoint vent_motion_config_ep(0x68, &kVentMotionConfig, sizeof(kVentMotionC
 CommEndpoint sensor_config_ep(0x69, &kSensorConfig, sizeof(kSensorConfig));
 
 CommEndpoint *comm_endpoints[] = {
-      &hw_revision_ep,     &logger_ep,           &config_cmd_ep,         &motor_config_ep,
-      &vent_app_config_ep, &vent_resp_config_ep, &vent_motion_config_ep, &sensor_config_ep,
+      &hw_revision_ep,   &version_ep,         &logger_ep,           &config_cmd_ep,
+      &motor_config_ep,  &vent_app_config_ep, &vent_resp_config_ep, &vent_motion_config_ep,
+      &sensor_config_ep,
 };
 
 SerialComm ser_comm(comm_endpoints, sizeof(comm_endpoints) / sizeof(comm_endpoints[0]), &usb_comm);
@@ -156,7 +159,7 @@ extern "C" void abvm_init() {
     if (!record_store.first_load()) {
         // TODO: handle load failure
     }
-    
+
     // Power on self test here
 }
 
