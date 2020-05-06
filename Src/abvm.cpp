@@ -15,6 +15,7 @@
 #include "factory/tests.h"
 #include "homing_controller.h"
 #include "i2c.h"
+#include "iwdg.h"
 #include "lc064.h"
 #include "main.h"
 #include "record_store.h"
@@ -105,6 +106,7 @@ Pin power_detect{MEASURE_12V_GPIO_Port, MEASURE_12V_Pin};
 Alarms alarms;
 
 extern "C" void abvm_init() {
+    HAL_IWDG_Refresh(&hiwdg);
     alarms.clear_all();
 
     encoder.reset();
@@ -120,7 +122,7 @@ extern "C" void abvm_init() {
 
     // Reset motor driver faults
     motor_driver.set_sleep(true);
-    HAL_Delay(1);
+    delay_ms(1);
     motor_driver.init();
     motor_driver.set_sleep(false);
     motor_driver.set_disabled(false);
@@ -149,9 +151,12 @@ extern "C" void abvm_init() {
     record_store.add_entry("VentMotionConfig", &kVentMotionConfig, sizeof(kVentMotionConfig),
                            sizeof(kVentMotionConfig));
     record_store.add_entry("SensorConfig", &kSensorConfig, sizeof(kSensorConfig), sizeof(kSensorConfig));
+    HAL_IWDG_Refresh(&hiwdg);
+
     if (!record_store.first_load()) {
         // TODO: handle load failure
     }
+    
     // Power on self test here
 }
 
@@ -171,6 +176,7 @@ extern "C" void abvm_update() {
     }
 
     if (millis() > last_motion + 10) {
+        HAL_IWDG_Refresh(&hiwdg);
         pressure_sensor.update();
         if (!home.is_done()) {
             home.update();
