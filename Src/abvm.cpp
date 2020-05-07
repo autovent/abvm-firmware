@@ -73,9 +73,8 @@ ControlPanel controls(&sw_start_pin, &sw_stop_pin, &sw_vol_up_pin, &sw_vol_dn_pi
 
 UI_V1 ui(&controls);
 
-VentilatorController vent(&motion, &motor, &pressure_sensor, kVentTVSettings,
-                          countof(kVentTVSettings), kVentRateSettings,
-                          countof(kVentRateSettings));
+VentilatorController vent(&motion, &motor, &pressure_sensor, kVentTVSettings, countof(kVentTVSettings),
+                          kVentRateSettings, countof(kVentRateSettings));
 HomingController home(&motor);
 
 LC064 eeprom(&hi2c1, 0);
@@ -100,7 +99,7 @@ CommEndpoint rr_config_ep(0x6B, &kVentRateSettings, sizeof(kVentRateSettings));
 CommEndpoint *comm_endpoints[] = {
       &hw_revision_ep,   &version_ep,         &logger_ep,           &config_cmd_ep,
       &motor_config_ep,  &vent_app_config_ep, &vent_resp_config_ep, &vent_motion_config_ep,
-      &sensor_config_ep, &tv_config_ep, &rr_config_ep
+      &sensor_config_ep, &tv_config_ep,       &rr_config_ep,
 };
 
 SerialComm ser_comm(comm_endpoints, sizeof(comm_endpoints) / sizeof(comm_endpoints[0]), &usb_comm);
@@ -227,7 +226,7 @@ extern "C" void abvm_update() {
                 } else {
                     vent.stop();
                 }
-                logger_ep.set_streaming(kRunningLoggingInterval);
+                logger_ep.set_streaming(kIdleLoggingInterval);
 
                 ui.set_audio_alert(UI_V1::AudioAlert::STOPPING);
                 controls.set_status_led(ControlPanel::STATUS_LED_2, false);
