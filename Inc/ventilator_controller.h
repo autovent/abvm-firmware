@@ -19,7 +19,8 @@ public:
         NUM_STATES,
     };
 
-    VentilatorController(IMotionPlanner *motion, Servo *motor, ISensor *pressure);
+    VentilatorController(IMotionPlanner *motion, Servo *motor, ISensor *pressure, float tv_settings[],
+                         uint32_t num_tv_settings, float bpm_settings[], uint32_t num_bpm_settings);
     void start();
     void stop();
     float update();
@@ -31,7 +32,7 @@ public:
     }
 
     inline void bump_tv(int i) {
-        next_tv_idx = saturate(next_tv_idx + i, 0, kNumTVSettings - 1);
+        next_tv_idx = saturate(next_tv_idx + i, 0, num_tv_settings - 1);
     }
 
     inline uint8_t get_tv_idx() {
@@ -39,7 +40,7 @@ public:
     }
 
     inline void bump_rate(int i) {
-        next_rate_idx = saturate(next_rate_idx + i, 0, kNumRateSettings - 1);
+        next_rate_idx = saturate(next_rate_idx + i, 0, num_rate_settings - 1);
     }
     inline float get_closed_pos() {
         return tidal_volume_settings[get_tv_idx()];
@@ -85,11 +86,11 @@ private:
 
     bool is_measure_plateau_cycle;
 
-    static constexpr uint8_t kNumTVSettings = 6;
-    float tidal_volume_settings[kNumTVSettings];
+    uint8_t num_tv_settings = 6;
+    float *tidal_volume_settings;
 
-    static constexpr uint8_t kNumRateSettings = 6;
-    float rate_settings[kNumRateSettings];
+    uint8_t num_rate_settings = 6;
+    float *rate_settings;
 
     uint8_t current_tv_idx;
     uint8_t next_tv_idx;
@@ -115,5 +116,4 @@ private:
     float inspiration_time() const;
 
     float expiration_time() const;
-
 };

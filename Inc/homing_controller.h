@@ -7,20 +7,18 @@
 
 class HomingController {
 public:
-    enum class State { IDLE = 0, HOMING, DONE };
+    enum class State { IDLE = 0, HOMING, HOMING_BACKUP, DONE };
 
     // TODO: Add max current limit
-    HomingController(Servo *motor, Pin *home);
+    HomingController(Servo *motor);
     void start();
-
     bool is_done();
     State update();
 
 private:
     Servo *motor;
-    Pin *home_switch;
     State state;
 
-    float homing_velocity;
-    //   float max_current;
+    float homing_velocity_rad_per_sec;
+    float backoff_velocity_rad_per_sec;
 };

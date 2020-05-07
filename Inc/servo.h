@@ -7,6 +7,7 @@
 #include <math.h>
 
 #include "controls/pid.h"
+#include "drivers/pin.h"
 #include "drv8873.h"
 #include "encoder.h"
 #include "math/conversions.h"
@@ -31,8 +32,9 @@ public:
         uint32_t to_int();
     };
 
-    Servo(uint32_t update_period_ms, DRV8873 *driver, Encoder *encoder, Config cfg, PID::Params vel_pid_params,
-          Range<float> vel_limits, PID::Params pos_pid_params, Range<float> pos_limits, bool is_inverted = false);
+    Servo(uint32_t update_period_ms, DRV8873 *driver, Encoder *encoder, Pin *limit_switch, Config cfg,
+          PID::Params vel_pid_params, Range<float> vel_limits, PID::Params pos_pid_params, Range<float> pos_limits,
+          bool is_inverted = false);
 
     void set_pos(float pos);
     void set_pos_deg(float pos);
@@ -46,6 +48,7 @@ public:
     void update();
     void set_mode(Mode m);
 
+    bool limit_switch_pressed();
     float velocity = 0;
     float position = 0;
     float command = 0;
@@ -63,6 +66,7 @@ private:
     Mode mode;
     DRV8873 *driver;
     Encoder *encoder;
+    Pin *limit_switch;
 
     Config config;
     PID vel_pid;
@@ -75,6 +79,7 @@ private:
     uint32_t pwm_freq;
     int32_t no_encoder_counts = 0;
     int32_t wrong_dir_counts = 0;
+    int32_t over_current_fault_counter;
 
     bool is_inverted;
 

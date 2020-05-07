@@ -50,7 +50,7 @@ float DRV8873::get_current() {
     uint32_t val = HAL_ADC_GetValue(&hadc1);
     volatile float adc_voltage = (val * VREF) / 4096.0f;
     float load_current = adc_voltage / R_LOAD;
-    return load_current * I_MIRROR_RATIO;
+    return get_sign_of_current() * load_current * I_MIRROR_RATIO;
 }
 
 void DRV8873::set_pwm_enabled(bool enable) {
@@ -69,9 +69,13 @@ void DRV8873::set_pwm(float value) {
     uint32_t max = htim->Init.Period;
     uint32_t pwm = max * (1 - fabsf(value));
 
-    bool dir = (value < 0) ^ is_inverted;
-    __HAL_TIM_SET_COMPARE(htim, tim_channel_pwm1, dir ? pwm : max);
-    __HAL_TIM_SET_COMPARE(htim, tim_channel_pwm2, dir ? max : pwm);
+    pwm_direction = (value < 0) ^ is_inverted;
+    __HAL_TIM_SET_COMPARE(htim, tim_channel_pwm1, pwm_direction ? pwm : max);
+    __HAL_TIM_SET_COMPARE(htim, tim_channel_pwm2, pwm_direction ? max : pwm);
+}
+
+float DRV8873::get_sign_of_current() const {
+    return (pwm_direction ^ is_inverted) ? -1 : 1; 
 }
 
 void DRV8873::set_disabled(bool disable) {

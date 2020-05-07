@@ -3,20 +3,11 @@
 uint8_t kHardwareRev = 1;
 
 MotorConfig kMotorConfig = {
-#if defined(MOTOR_GOBILDA_30RPM)
     .motor_params = {188, 28},
     .motor_vel_pid_params = {2.8, .0, .0},
     .motor_pos_pid_params = {14.5, .1, .0},                         //.02},
-    .motor_vel_limits = {-30 * 0.104719755, 30 * 0.104719755},  // RPM to rads/sec
-    .motor_pos_limits = {0, deg_to_rad(95)},
-
-#elif defined(MOTOR_ROBOTZONE_16RPM)
-    .motor_params = {515.63, 48};
-    .motor_vel_pid_params = {6.5, .05, 0};
-    .motor_pos_pid_params = {16, 0, 0.0};
-    .motor_vel_limits = {-15 * 0.104719755, 15 * 0.104719755};  // RPM to rads/sec
-    .motor_pos_limits = {0, deg_to_rad(89)};
-#endif
+    .motor_vel_limits = {-25 * 0.104719755, 25 * 0.104719755},  // RPM to rads/sec
+    .motor_pos_limits = {0, deg_to_rad(90)},
 };
 
 VentAppConfig kVentAppConfig = {
@@ -43,19 +34,23 @@ VentResiprationConfig kVentRespirationConfig = {
 
 VentMotionConfig kVentMotionConfig = {
     .idle_pos_deg = 10,
-    .open_pos_deg = 25,
-    .min_closed_pos_deg = 40,
-    .max_closed_pos_deg = 90,
-    .ie_ratio = {1, 2},
+    .open_pos_deg = 16,
+    .expiration_part = 2,
     .invert_motion = true,
+
 };
 
+float kVentTVSettings[6] ={55, 62, 69, 76, 83, 90};
+float kVentRateSettings[6] = {8, 10, 12, 14, 16, 18};
+
+// 1/(.00054 V/kPA  / 10.1972 cmH20/kPA)
+constexpr float kPressureSensorOffsetGain_cmH2O_per_mV = (10.1972 /  0.54);
 SensorConfig kSensorConfig = {
-    .pressure_params = {(1.0f / (6.8948 * .00054)), (.045 + (1 / (6.8948 /*kPA/psi*/ * .00054)) * -0.00325f)},
+    .pressure_params = {kPressureSensorOffsetGain_cmH2O_per_mV, kPressureSensorOffsetGain_cmH2O_per_mV * -3.25f},
 };
 
 ConfigCommandRPC::ConfigCommandRPC(uint8_t id, RecordStore *store) :
-    CommEndpoint(id, NULL, sizeof(uint32_t)), store(store) {}
+    CommEndpoint(id, (void *const)NULL, sizeof(uint32_t), false), store(store) {}
 
 uint8_t ConfigCommandRPC::write(void *data, size_t size) {
     uint32_t *cmd_in = (uint32_t*)data;
