@@ -22,6 +22,8 @@ uint8_t DataLogger::read(void *data, size_t size) {
     log.vent_rate = vent->get_rate();
     log.vent_closed_pos = vent->get_closed_pos();
     log.vent_open_pos = vent->get_open_pos();
+    log.peak_pressure = vent->get_peak_pressure_cmH2O();
+    log.plateau_pressure = vent->get_plateau_pressure_cmH2O();
 
     return CommEndpoint::read(data, size);
 }
