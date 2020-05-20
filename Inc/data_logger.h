@@ -30,6 +30,8 @@ private:
         float vent_closed_pos;
         float vent_open_pos;
         uint32_t motor_faults;
+        float peak_pressure;
+        float plateau_pressure;
     };
 
     dataLog log;

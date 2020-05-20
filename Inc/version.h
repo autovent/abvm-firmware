@@ -6,4 +6,4 @@ struct Version {
     uint32_t patch;
 };
 
-constexpr Version APP_VERSION = {0, 12, 2};
+constexpr Version APP_VERSION = {0, 12, 4};
