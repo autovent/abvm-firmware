@@ -3,7 +3,7 @@
 uint8_t kHardwareRev = 1;
 
 MotorConfig kMotorConfig = {
-    .motor_params = {130, 500},
+    .motor_params = {130, 2*500},
     .motor_vel_pid_params = {2.8, .0, .0},
     .motor_pos_pid_params = {14.5, .1, .0},                         //.02},
     .motor_vel_limits = {-25 * 0.104719755, 25 * 0.104719755},  // RPM to rads/sec
