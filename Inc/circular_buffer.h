@@ -122,4 +122,4 @@ private:
     }
 };
 
-#endif  // CIRCULAR_BUFFER_H)_
+#endif  // CIRCULAR_BUFFER_H_
